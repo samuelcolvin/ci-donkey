@@ -51,4 +51,7 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-
+.DS_Store
+env/*
+users.json
+FlaskCI/static/libs/

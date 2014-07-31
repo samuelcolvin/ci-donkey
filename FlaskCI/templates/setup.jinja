@@ -1,0 +1,27 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<div class="content">
+    <form method="POST" action="">
+        {{ form.hidden_tag() if form.hidden_tag }}
+        {% for f in form if f.type != 'CSRFTokenField' %}
+            <div class="form-group{% if f.errors %} has-error has-feedback{% endif %}">
+                {{ f.label(class_="control-label") }}
+                {{ f(class_="form-control") }}
+                {% if f.errors %}
+                  <span class="glyphicon glyphicon-remove form-control-feedback"></span>
+                {% endif %}
+                {% if f.description %}
+                  <span class="help-block">{{ f.description }}</span>
+                {% endif %}
+                {% if f.errors %}
+                        {% for e in f.errors %}
+                        <span class="help-block">{{ e }}</span>
+                        {% endfor %}
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-default">Submit</button>
+    </form>
+</div>
+{% endblock %}

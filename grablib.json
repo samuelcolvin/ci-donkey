@@ -1,0 +1,30 @@
+{
+  "libs_root": "FlaskCI/static/libs",
+  "sites":
+  {
+    "github": "https://raw.githubusercontent.com",
+    "bootstrap": "{{ github }}/twbs/bootstrap/v3.2.0/dist"
+  },
+  "libs": {
+    "http://code.jquery.com/jquery-1.11.0.js": "js/{{ filename }}",
+    "http://code.jquery.com/jquery-1.11.0.min.js": "js/{{ filename }}",
+    "http://code.jquery.com/jquery-1.11.0.min.map": "js/{{ filename }}",
+    "{{ bootstrap }}/css/bootstrap.css": "css/{{ filename }}",
+    "{{ bootstrap }}/css/bootstrap.min.css": "css/{{ filename }}",
+    "{{ bootstrap }}/css/bootstrap.css.map": "css/{{ filename }}",
+    "{{ bootstrap }}/css/bootstrap-theme.css": "css/{{ filename }}",
+    "{{ bootstrap }}/css/bootstrap-theme.min.css": "css/{{ filename }}",
+    "{{ bootstrap }}/js/bootstrap.js": "js/{{ filename }}",
+    "{{ bootstrap }}/js/bootstrap.min.js": "js/{{ filename }}",
+    "{{ bootstrap }}/fonts/glyphicons-halflings-regular.eot": "fonts/{{ filename }}",
+    "{{ bootstrap }}/fonts/glyphicons-halflings-regular.svg": "fonts/{{ filename }}",
+    "{{ bootstrap }}/fonts/glyphicons-halflings-regular.ttf": "fonts/{{ filename }}",
+    "{{ bootstrap }}/fonts/glyphicons-halflings-regular.woff": "fonts/{{ filename }}",
+    "https://github.com/makeusabrew/bootbox/releases/download/v4.2.0/bootbox.js": "js/{{ filename }}",
+    "https://github.com/makeusabrew/bootbox/releases/download/v4.2.0/bootbox.min.js": "js/{{ filename }}",
+    "{{ github }}/ivaynberg/select2/3.5.1/select2.js": "js/{{ filename }}",
+    "{{ github }}/ivaynberg/select2/3.5.1/select2.min.js": "js/{{ filename }}",
+    "{{ github }}/lodash/lodash/2.4.1/dist/lodash.js": "js/{{ filename }}",
+    "{{ github }}/lodash/lodash/2.4.1/dist/lodash.min.js": "js/{{ filename }}"
+  }
+}
