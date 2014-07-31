@@ -12,7 +12,7 @@
                   <span class="glyphicon glyphicon-remove form-control-feedback"></span>
                 {% endif %}
                 {% if f.description %}
-                  <span class="help-block">{{ f.description }}</span>
+                  <span class="help-block">{{ f.description|safe }}</span>
                 {% endif %}
                 {% if f.errors %}
                         {% for e in f.errors %}

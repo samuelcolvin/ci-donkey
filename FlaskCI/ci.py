@@ -18,8 +18,8 @@ class SetupForm(Form):
     name = fields.TextField(u'CI Project Name', validators=[validators.required()])
     git_url = fields.TextField(u'Git URL', validators=[validators.required()])
     git_username = fields.TextField(u'Git Username', validators=[validators.required()])
-    pw_descr = 'This must be saved as plain text on the server, therefore' \
-        ' its a good idea to set up as special user for this function.'
+    pw_descr = 'This must be saved as <strong>plain text</strong> on the server, therefore' \
+        ' it is a good idea to set up as special user for this function.'
     git_password = fields.PasswordField(u'Git Password', validators=[validators.required()],
         description = pw_descr)
     dft_secret_url = ''.join(random.choice(string.ascii_lowercase + \
@@ -27,6 +27,15 @@ class SetupForm(Form):
     secret_url_descr = 'This will make up the which github pings after a push.'
     secret_url = fields.TextField(u'Secret URL Argument', description = secret_url_descr,
         validators=[validators.required()], default = dft_secret_url)
+    pre_script_descr = 'This is run after clone and changing into the project directory, ' \
+        'but is not part of the test, failure will be considered setup failure not CI failure'
+    pre_script_dft = 'virtualenv env\nenv/bin/pip install -r requirements.txt'
+    pre_script = fields.TextAreaField(u'Pre Test Script', validators=[validators.required()],
+        description = pre_script_descr, default = pre_script_dft)
+    script_descr = 'This is the actual test script.'
+    script_dft = 'python manage.py test'
+    script = fields.TextAreaField(u'Test Script', validators=[validators.required()],
+        description = script_descr, default = script_dft)
 
     # def validate_email(self, fields):
     #     user = self.get_user()
