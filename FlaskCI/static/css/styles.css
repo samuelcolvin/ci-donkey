@@ -77,3 +77,8 @@ pre {
         padding: 0px 10px;
     }
 }
+
+.build-output {
+    height: 300px;
+    overflow: auto;
+}

@@ -1,6 +1,10 @@
 DEBUG = True
-SECRET_KEY = '123456790'
+SECRET_KEY = 'QjlbcNrTmqVayjCU5xDNsp0Ll'
 USER_FILE = 'users.json'
 SETUP_FILE = 'setup.json'
+LOG_FILE = 'log.json'
 COMPANY_NAME = 'Testing'
 DATETIME_FORMAT = '%a, %d-%b-%Y %H:%M:%S UTC'
+CONFIG_SCRIPT = 'FlaskCI.sh'
+CONFIG_PRE = '<PRE SCRIPT>'
+CONFIG_MAIN = '<MAIN SCRIPT>'

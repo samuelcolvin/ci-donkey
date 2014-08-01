@@ -1,0 +1,20 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<div class="content">
+  <h3>Build</h3>
+  <p id="build-message">building...</p>
+  <h4>Pre Build Setup</h4>
+  <pre id="pre-build" class="build-output">
+  </pre>
+  <h4>CI Build &amp; Testing</h4>
+  <pre id="main-build" class="build-output">
+  </pre>
+</div>
+{% endblock %}
+{% block extra_js %}
+  <script>
+    var pogress_url = '{{ pogress_url }}';
+  </script>
+  <script src="{{ url_for('static', filename='js/build.js') }}?"></script>
+{% endblock %}

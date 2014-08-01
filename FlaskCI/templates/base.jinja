@@ -70,5 +70,7 @@
     <script src={{ url_for('static', filename='libs/js/bootstrap.min.js') }}></script>
     <script src={{ url_for('static', filename='libs/js/bootbox.min.js') }}></script>
     <script src={{ url_for('static', filename='libs/js/select2.min.js') }}></script>
+    {% block extra_js %}
+    {% endblock %}
   </body>
 </html>

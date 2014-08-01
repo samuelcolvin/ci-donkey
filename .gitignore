@@ -55,5 +55,6 @@ docs/_build/
 env/*
 users.json
 setup.json
+log.json
 mytoken.txt
 FlaskCI/static/libs/
