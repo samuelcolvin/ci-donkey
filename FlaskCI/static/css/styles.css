@@ -103,6 +103,10 @@ table.history td{
     overflow: auto;
 }
 
+#pre-build {
+    max-height: 400px;
+}
+
 .build-script {
     height: 150px;
     overflow: auto;
