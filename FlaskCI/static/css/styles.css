@@ -68,7 +68,7 @@ table {
 }
 
 table.history td{
-    width: 33%;
+    width: 25%;
 }
 
 .glyphicon-ok {
@@ -99,6 +99,11 @@ table.history td{
 }
 
 .build-output {
-    height: 300px;
+    min-height: 300px;
+    overflow: auto;
+}
+
+.build-script {
+    height: 150px;
     overflow: auto;
 }

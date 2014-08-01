@@ -1,0 +1,10 @@
+{
+  "name": "testing FlaskCI", 
+  "pre_tag": "<PRE SCRIPT>", 
+  "main_tag": "<MAIN SCRIPT>", 
+  "github_token": "", 
+  "ci_script": "FlaskCI.sh", 
+  "secret_url": "ICkmGdbXUVpxlm4rAPKRblUtfMQjlbcNrTmqVayjCU5xDNsp0Ll9FtkeGuOx", 
+  "git_url": "https://github.com/samuelcolvin/FlaskCI.git", 
+  "datetime": "Fri, 01-Aug-2014 21:17:05 UTC"
+}

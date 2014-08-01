@@ -57,4 +57,5 @@ users.json
 setup.json
 log.json
 mytoken.txt
+status.svg
 FlaskCI/static/libs/

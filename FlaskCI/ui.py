@@ -1,4 +1,5 @@
-from flask import url_for, redirect, render_template, flash, jsonify
+from flask import url_for, redirect, render_template
+from flask import flash, jsonify, request, send_file
 from FlaskCI import app
 from flask.ext.login import login_required
 from flask_wtf import Form
@@ -16,20 +17,17 @@ def api_error(e):
 @login_required
 def index():
     logs = ci.Build.history()
+    logs.reverse()
     records = []
     for log in logs:
         records.append({
             'Date': date_link(log),
-            'dt': timestamp(log['datetime']),
             'Complete': html_bool(log['finished']),
-            'Successful': html_bool(not log['term_error'])
+            'Test Successful': html_bool(not log['term_error']),
+            'Test Passed': html_bool(log['test_passed'])
             })
-    records.sort(key = lambda r: -r['dt'])
-    theadings = ('Date', 'Complete', 'Successful')
+    theadings = ('Date', 'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', records = records, theadings = theadings)
-
-def timestamp(dstr):
-    return time.mktime(ci.dt_from_str(dstr).timetuple())
 
 def date_link(log):
     dt = ci.dt_from_str(log['datetime']).replace(tzinfo = pytz.utc)
@@ -51,10 +49,17 @@ def build():
 def show_build(id = None):
     logs = ci.Build.history()
     log = (log for log in logs if log['build_id'] == id).next()
-    return render_template('build.jinja', 
-        build_status = 'Build Failed' if log['term_error'] else 'Build Successful',
-        pre_build_log = log['prelog'],
-        main_build_log = log['mainlog'])
+    if not log['finished']:
+        return render_template('build.jinja', pogress_url = url_for('progress', id = id))
+    else:
+        build_status =  '<p>Test Status: %s</p>\n' % html_bool(not log['term_error'])
+        build_status += '<p>Test Passed: %s</p>' % html_bool(log['test_passed'])
+        return render_template('build.jinja', 
+            build_status = build_status,
+            pre_build_log = log['prelog'],
+            main_build_log = log['mainlog'],
+            pre_script = '\n'.join(log['pre_script']),
+            main_script = '\n'.join(log['main_script']))
 
 @app.route('/progress/<id>')
 @login_required
@@ -65,6 +70,23 @@ def progress(id = None):
         return api_error(e)
     else:
         return jsonify(**status)
+
+@app.route('/secret_build/<code>')
+def secret_build(code = None):
+    setup = obj = ci.setup_cls()
+    print 'request.data:', request.data
+    time.sleep(0.5)
+    if setup.secret_url != code:
+        return 'Incorrect code', 403
+    build_id = ci.build()
+    return 'building, build_id: %s' % build_id
+
+@app.route('/status.svg')
+def status_svg():
+    if not os.path.exists(app.config['STATUS_SVG_FILE']):
+        return 'no builds, no status file', 400
+    svg_path = os.path.join('..', app.config['STATUS_SVG_FILE'])
+    return send_file(svg_path, mimetype = 'image/svg+xml')
 
 class SetupForm(Form):
     name = fields.TextField(u'CI Project Name', validators=[validators.required()])

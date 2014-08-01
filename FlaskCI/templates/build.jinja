@@ -9,7 +9,17 @@
     {% else %}
       building...
     {% endif %}
-    </p>
+  </p>
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Pre Build Script</h4>
+      <pre id="pre-script" class="build-script">{{ pre_script }}</pre>
+    </div>
+    <div class="col-md-6">
+      <h4>CI Script</h4>
+      <pre id="main-script" class="build-script">{{ main_script }}</pre>
+    </div>
+  </div>
   <h4>Pre Build Setup</h4>
   <pre id="pre-build" class="build-output">{{ pre_build_log }}</pre>
   <h4>CI Build &amp; Testing</h4>

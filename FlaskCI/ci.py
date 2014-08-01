@@ -24,29 +24,16 @@ def _now():
 def _build_log_path(id):
     return os.path.join('/tmp', id + '.log')
 
-def get_build_log(build_id):
-    return Build.log_info(build_id)
-
-# def _dft_log():
-#     return {
-#         'build_id': 'unknown', 
-#         'datetime': '', 
-#         'prelog': '', 
-#         'mainlog': '', 
-#         'prefin': False, 
-#         'finished': False, 
-#         'term_error': False
-#     }
-
 class KnownError(Exception):
     pass
 
 class CommandError(Exception):
     pass
 
-TERMINAL_ERROR =   '   ############# TERMINAL ERROR #############\n'
-LOG_PRE_FINISHED = '   ############# PRE BUILD FINISHED #############\n'
-LOG_FINISHED =     '   ############# FINISHED #############\n'
+TERMINAL_ERROR =   '#############   TERMINAL ERROR   #############\n'
+TEST_ERROR =       '#############     TEST ERROR     #############\n'
+LOG_PRE_FINISHED = '############# PRE BUILD FINISHED #############\n'
+LOG_FINISHED =     '#############      FINISHED      #############\n'
 
 
 class Build(object):
@@ -63,7 +50,11 @@ class Build(object):
         self.main_script = []
 
     @staticmethod
-    def log_info(build_id):
+    def log_info(build_id, pre_script = None, main_script = None):
+        if pre_script == None and main_script == None:
+            script_path = Build._build_script_path(build_id)
+            if os.path.exists(script_path):
+                pre_script, main_script = json.load(open(script_path, 'r'))
         with open(_build_log_path(build_id), 'r') as logfile:
             log = logfile.read()
             m = re.search('Starting build at (.*)', log)
@@ -75,10 +66,12 @@ class Build(object):
                 prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
                 prelog += LOG_PRE_FINISHED
             finished = LOG_FINISHED in log
+            test_passed = TEST_ERROR not in log and finished
             term_error = TERMINAL_ERROR in log
             local = locals()
             status = {name: local[name] for name in 
-            ['build_id', 'datetime', 'prelog', 'mainlog', 'prefin', 'finished', 'term_error']}
+            ['build_id', 'datetime', 'prelog', 'mainlog', 'prefin', 'term_error', 
+            'finished', 'test_passed', 'pre_script', 'main_script']}
             return status
 
     @staticmethod
@@ -94,7 +87,9 @@ class Build(object):
         if len(t) > 0:
             self.url = re.sub('https://', 
                 'https://%s@' % t, self.url)
-        self._log('clone url: %s' % self.url.replace(t, '<token>'))
+            self._log('clone url: %s' % self.url.replace(t, '<token>'))
+        else:
+            self._log('clone url: %s' % self.url)
 
     def build(self):
         try:
@@ -145,12 +140,19 @@ class Build(object):
                 current_script = self.main_script
                 continue
             current_script.append(line)
+        obj = (self.pre_script, self.main_script)
+        json.dump(obj, open(Build._build_script_path(self.uuid), 'w'), indent = 2)
+
+    @staticmethod
+    def _build_script_path(id):
+        return os.path.join('/tmp', id + '.script')
 
     def main_build(self):
         try:
+            time.sleep(5)
             self.execute(self.main_script)
         except Exception, e:
-            self._error(e)
+            self._error(e, True)
             return False
         else:
             self._message(LOG_FINISHED)
@@ -175,11 +177,16 @@ class Build(object):
             except CommandError, e:
                 raise e
             except Exception, e:
-                raise CommandError('%s: %s' % (e.__class__.__name__, str(e)))
+                raise KnownError('%s: %s' % (e.__class__.__name__, str(e)))
 
-    def _error(self, e):
-        if isinstance(e, CommandError) or isinstance(e, KnownError):
-            self._log('%s: %s' % (e.__class__.__name__, str(e)))
+    def _error(self, e, errors_expected = False):
+        if errors_expected and isinstance(e, CommandError):
+            self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
+            self._message(TEST_ERROR)
+            self._message(LOG_FINISHED)
+            return
+        if isinstance(e, KnownError) or isinstance(e, CommandError):
+            self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
         else:
             tb = traceback.format_exc()
             self._log(tb)
@@ -191,10 +198,19 @@ class Build(object):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
         self._log('Build finished at %s' % _now())
         logs = [log for log in Build.history() if log['build_id'] != self.uuid]
-        logs.append(Build.log_info(self.uuid))
+        log_info = Build.log_info(self.uuid, self.pre_script, self.main_script)
+        logs.append(log_info)
+        self._set_svg(log_info['test_passed'])
         self._save_logs(logs)
         if self.delete_after:
             os.remove(self.log_file)
+            os.remove(Build._build_script_path(self.uuid))
+
+    def _set_svg(self, passed):
+        filename = 'passing.svg' if passed else 'failing.svg'
+        thisdir = os.path.dirname(__file__)
+        src = os.path.join(thisdir, 'static', filename)
+        shutil.copyfile(src, app.config['STATUS_SVG_FILE'])
 
     def _save_logs(self, logs):
         json.dump(logs, open(app.config['LOG_FILE'], 'w'), indent = 2)
