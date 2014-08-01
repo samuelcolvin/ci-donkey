@@ -149,7 +149,6 @@ class Build(object):
 
     def main_build(self):
         try:
-            time.sleep(5)
             self.execute(self.main_script)
         except Exception, e:
             self._error(e, True)
