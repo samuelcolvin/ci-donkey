@@ -1,3 +1,9 @@
+"""
+The authentication here is pretty primative (no functionality yet
+to add users or reset passwords) but it should be secure.
+
+Make sure to change the username and password below!
+"""
 from flask import url_for, redirect, request, render_template, flash
 from flask_wtf import Form
 from wtforms import fields, validators
@@ -5,7 +11,6 @@ from flask.ext import login
 from werkzeug.security import generate_password_hash, check_password_hash
 from FlaskCI import app
 import os, json, uuid
-from pprint import pprint
 
 class UserManager(object):
     def __init__(self, model):
@@ -117,7 +122,7 @@ class User():
 users = UserManager(User)
 
 if len(users) == 0:
-    u = User('samuel@example.com', 'testing')
+    u = User('samuel@example.com', 'change me!')
     u.active = True
     u.save()
 
@@ -176,81 +181,3 @@ login_manager.login_view = 'login_view'
 @login_manager.user_loader
 def load_user(user_id):
     return users.get(uuid = user_id)
-
-
-# # Create customized index view class that handles login & registration
-# class MyAdminIndexView(admin.AdminIndexView):
-
-#     @expose('/')
-#     def index(self):
-#         if not login.current_user.is_authenticated():
-#             return redirect(url_for('.login_view'))
-#         return super(MyAdminIndexView, self).index()
-
-#     @expose('/login/', methods=('GET', 'POST'))
-#     def login_view(self):
-#         # handle user login
-#         form = LoginForm(request.form)
-#         if helpers.validate_form_on_submit(form):
-#             user = form.get_user()
-#             login.login_user(user)
-
-#         if login.current_user.is_authenticated():
-#             return redirect(url_for('.index'))
-#         link = '<p>Don\'t have an account? <a href='' + url_for('.register_view') + ''>Click here to register.</a></p>'
-#         self._template_args['form'] = form
-#         self._template_args['link'] = link
-#         return super(MyAdminIndexView, self).index()
-
-#     @expose('/register/', methods=('GET', 'POST'))
-#     def register_view(self):
-#         form = RegistrationForm(request.form)
-#         if helpers.validate_form_on_submit(form):
-#             user = User()
-
-#             form.populate_obj(user)
-#             user.password = generate_password_hash(form.password.data)
-#             user.active = False
-
-#             db.session.add(user)
-#             db.session.commit()
-
-#             login.login_user(user)
-#             return redirect(url_for('.index'))
-#         link = '<p>Already have an account? <a href='' + url_for('.login_view') + ''>Click here to log in.</a></p>'
-#         self._template_args['form'] = form
-#         self._template_args['link'] = link
-#         return super(MyAdminIndexView, self).index()
-
-#     @expose('/logout/')
-#     def logout_view(self):
-#         login.logout_user()
-#         return redirect(url_for('.index'))
-
-
-
-# # Create admin
-# admin = admin.Admin(app, 
-#                     'Auth', 
-#                     index_view = MyAdminIndexView(), 
-#                     base_template = 'users.jinja',
-#                     template_mode = 'bootstrap3')
-
-# Add view
-# admin.add_view(MyModelView(User, db.session))
-
-# @app.before_first_request
-# def setup_db():
-#     app_dir = os.path.realpath(os.path.dirname(__file__))
-#     database_path = os.path.join(app_dir, app.config['DATABASE_FILE'])
-#     if os.path.exists(database_path):
-#         return
-#     db.drop_all()
-#     db.create_all()
-#     test_user = User(email = 'samuel@tutorcruncher.com', 
-#                      password = generate_password_hash('test'),
-#                      active = True)
-#     db.session.add(test_user)
-
-#     db.session.commit()
-#     return
