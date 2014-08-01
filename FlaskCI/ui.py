@@ -3,7 +3,7 @@ from FlaskCI import app
 from flask.ext.login import login_required
 from flask_wtf import Form
 from wtforms import fields, validators
-import string, random, json, os, traceback
+import string, random, json, os, traceback, time, pytz
 from datetime import datetime as dtdt
 from pprint import pprint
 import ci
@@ -15,13 +15,46 @@ def api_error(e):
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.jinja')
+    logs = ci.Build.history()
+    records = []
+    for log in logs:
+        records.append({
+            'Date': date_link(log),
+            'dt': timestamp(log['datetime']),
+            'Complete': html_bool(log['finished']),
+            'Successful': html_bool(not log['term_error'])
+            })
+    records.sort(key = lambda r: -r['dt'])
+    theadings = ('Date', 'Complete', 'Successful')
+    return render_template('index.jinja', records = records, theadings = theadings)
+
+def timestamp(dstr):
+    return time.mktime(ci.dt_from_str(dstr).timetuple())
+
+def date_link(log):
+    dt = ci.dt_from_str(log['datetime']).replace(tzinfo = pytz.utc)
+    dstr = dt.astimezone(pytz.timezone('Europe/London')).strftime(app.config['DISPLAY_DT'])
+    return '<a href="%s">%s</a>' % (url_for('show_build', id = log['build_id']), dstr)
+
+def html_bool(b):
+    glyph = 'ok' if b else 'remove'
+    return '<span class="glyphicon glyphicon-%s"></span>' % glyph
 
 @app.route('/build')
 @login_required
 def build():
     build_id = ci.build()
     return render_template('build.jinja', pogress_url = url_for('progress', id = build_id))
+
+@app.route('/show_build/<id>')
+@login_required
+def show_build(id = None):
+    logs = ci.Build.history()
+    log = (log for log in logs if log['build_id'] == id).next()
+    return render_template('build.jinja', 
+        build_status = 'Build Failed' if log['term_error'] else 'Build Successful',
+        pre_build_log = log['prelog'],
+        main_build_log = log['mainlog'])
 
 @app.route('/progress/<id>')
 @login_required
@@ -50,16 +83,17 @@ class SetupForm(Form):
     secret_url = fields.TextField(u'Secret URL Argument', description = secret_url_descr,
         validators=[validators.required()], default = dft_secret_url)
 
-    pre_script_descr = 'This is run after clone and changing into the project directory, ' \
-        'but is not part of the test, failure will be considered setup failure not CI failure'
-    pre_script_dft = 'virtualenv env\nenv/bin/pip install -r requirements.txt'
-    pre_script = fields.TextAreaField(u'Pre Test Script', validators=[validators.required()],
-        description = pre_script_descr, default = pre_script_dft)
+    ci_script_descr = 'This is the file which is split then ran to test the project.'
+    ci_script = fields.TextField(u'CI Script Name', description = ci_script_descr,
+        validators=[validators.required()], default = 'FlaskCI.sh')
 
-    script_descr = 'This is the actual test script. Comment out commands with a #.'
-    script_dft = 'python manage.py test'
-    script = fields.TextAreaField(u'Test Script', validators=[validators.required()],
-        description = script_descr, default = script_dft)
+    pre_tag_descr = 'Tag signifying beginning of pre test script.'
+    pre_tag = fields.TextField(u'CI Script Name', description = pre_tag_descr,
+        validators=[validators.required()], default = '<PRE SCRIPT>')
+
+    main_tag_descr = 'Tag signifying beginning of main test script.'
+    main_tag = fields.TextField(u'CI Script Name', description = main_tag_descr,
+        validators=[validators.required()], default = '<MAIN SCRIPT>')
 
     def dump_json(self):
         d = {}

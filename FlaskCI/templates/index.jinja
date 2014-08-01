@@ -2,7 +2,29 @@
 
 {% block content %}
 <div class="content">
-  <h3>Build History</h3>
-  <a href="{{ url_for('build') }}" class="btn btn-default">Build Now</a>
+  <h4>Build History</h4>
+  <!-- <a href="{{ url_for('build') }}" class="btn btn-default">Build Now</a> -->
+  {% if records %}
+  <table class="sec history table table-bordered">
+    <thead>
+      <tr>
+      {% for head in theadings %}
+        <th>{{ head }}</th>
+      {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for record in records %}
+      <tr>
+      {% for head in theadings %}
+        <td>{{ record[head] }}</td>
+      {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No previous builds.</p>
+  {% endif %}
 </div>
 {% endblock %}

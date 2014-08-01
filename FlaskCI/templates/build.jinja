@@ -3,13 +3,17 @@
 {% block content %}
 <div class="content">
   <h3>Build</h3>
-  <p id="build-message">building...</p>
+  <p id="build-message">
+    {% if build_status %}
+      {{ build_status }}
+    {% else %}
+      building...
+    {% endif %}
+    </p>
   <h4>Pre Build Setup</h4>
-  <pre id="pre-build" class="build-output">
-  </pre>
+  <pre id="pre-build" class="build-output">{{ pre_build_log }}</pre>
   <h4>CI Build &amp; Testing</h4>
-  <pre id="main-build" class="build-output">
-  </pre>
+  <pre id="main-build" class="build-output">{{ main_build_log }}</pre>
 </div>
 {% endblock %}
 {% block extra_js %}

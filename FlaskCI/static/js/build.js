@@ -26,4 +26,6 @@ function finished(message){
 	$('#build-message').text(message);
 }
 
-var clear_check = setInterval(update, 500);
+if (pogress_url != ''){
+	var clear_check = setInterval(update, 500);
+}

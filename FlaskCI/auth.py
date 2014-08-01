@@ -153,7 +153,7 @@ def login_view():
     if login.current_user.is_authenticated():
         flash('Logged in successfully.')
         return redirect(request.args.get('next') or url_for('index'))
-    return render_template('login.jinja', form = form, page_title = 'login')
+    return render_template('login.jinja', form = form)
 
 class RegistrationForm(Form):
     email = fields.TextField(validators=[validators.required(), validators.Email()])

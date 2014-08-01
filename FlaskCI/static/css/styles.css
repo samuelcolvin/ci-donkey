@@ -59,6 +59,26 @@ pre {
     color: black;
 }
 
+.sec {
+    margin-top: 10px;
+}
+
+table {
+    background-color: white;
+}
+
+table.history td{
+    width: 33%;
+}
+
+.glyphicon-ok {
+    color: green;
+}
+
+.glyphicon-remove {
+    color: red;
+}
+
 @media (max-width: 760px){
 
     .container {

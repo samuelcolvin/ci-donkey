@@ -10,9 +10,8 @@ def main_menu():
     ep = request.endpoint
     if not current_user.is_authenticated():
         return [{'page': 'login_view', 'name': 'Login', 'active': ep == 'login_view'}]
-    pages = [('setup', 'Setup'), ('about', 'About')]
+    pages = [('build', 'Build Now'), ('setup', 'Setup'), ('about', 'About')]
     return [{'page': page, 'name': name, 'active': ep == page} for page, name in pages]
-
 
 import FlaskCI.ui, FlaskCI.auth
 

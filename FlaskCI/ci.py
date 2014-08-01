@@ -4,10 +4,13 @@ from FlaskCI import app
 import git, uuid, os, json, re, thread
 import traceback, shutil, re, time, tempfile
 
+def dt_from_str(dstr):
+    return dtdt.strptime(dstr, app.config['DATETIME_FORMAT'])
+
 def setup_cls():
     if os.path.exists(app.config['SETUP_FILE']):
         obj = json.load(open(app.config['SETUP_FILE'], 'r'))
-        obj['datetime'] = dtdt.strptime(obj['datetime'], app.config['DATETIME_FORMAT'])
+        obj['datetime'] = dt_from_str(obj['datetime'])
         return type('CISetup', (), obj)
 
 def build():
@@ -24,6 +27,17 @@ def _build_log_path(id):
 def get_build_log(build_id):
     return Build.log_info(build_id)
 
+# def _dft_log():
+#     return {
+#         'build_id': 'unknown', 
+#         'datetime': '', 
+#         'prelog': '', 
+#         'mainlog': '', 
+#         'prefin': False, 
+#         'finished': False, 
+#         'term_error': False
+#     }
+
 class KnownError(Exception):
     pass
 
@@ -33,6 +47,8 @@ class CommandError(Exception):
 TERMINAL_ERROR =   '   ############# TERMINAL ERROR #############\n'
 LOG_PRE_FINISHED = '   ############# PRE BUILD FINISHED #############\n'
 LOG_FINISHED =     '   ############# FINISHED #############\n'
+
+
 class Build(object):
     def __init__(self, delete_after = True):
         self.setup = setup_cls()
@@ -45,6 +61,32 @@ class Build(object):
         self._log('project directory: %s' % self.tmp_path)
         self.pre_script = []
         self.main_script = []
+
+    @staticmethod
+    def log_info(build_id):
+        with open(_build_log_path(build_id), 'r') as logfile:
+            log = logfile.read()
+            m = re.search('Starting build at (.*)', log)
+            datetime = m.groups()[0]
+            prelog = log
+            mainlog = None
+            prefin = LOG_PRE_FINISHED in log
+            if prefin:
+                prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
+                prelog += LOG_PRE_FINISHED
+            finished = LOG_FINISHED in log
+            term_error = TERMINAL_ERROR in log
+            local = locals()
+            status = {name: local[name] for name in 
+            ['build_id', 'datetime', 'prelog', 'mainlog', 'prefin', 'finished', 'term_error']}
+            return status
+
+    @staticmethod
+    def history():
+        logs = []
+        if os.path.exists(app.config['LOG_FILE']):
+            logs = json.load(open(app.config['LOG_FILE'], 'r'))
+        return logs
 
     def set_url(self):
         self.url = self.setup.git_url
@@ -65,8 +107,14 @@ class Build(object):
 
     def prebuild(self):
         try:
+            # first we save a blank log item so it's in history
+            logs = Build.history()
+            logs.append(Build.log_info(self.uuid))
+            self._save_logs(logs)
+
             self.set_url()
             self.download()
+            self.get_ci_script()
             self.execute(self.pre_script)
         except Exception, e:
             self._error(e)
@@ -78,24 +126,25 @@ class Build(object):
     def download(self):
         git.Git().clone(self.url, self.tmp_path)
         self._log('cloned code successfully')
-        config_path = os.path.join(self.tmp_path, app.config['CONFIG_SCRIPT'])
-        if not os.path.exists(config_path):
-            raise KnownError('Repo has config no file: %s' % app.config['CONFIG_SCRIPT'])
-        config_script = open(config_path, 'r').read()
-        if app.config['CONFIG_MAIN'] not in config_script:
-            raise KnownError('Config has no divider: %s' % app.config['CONFIG_MAIN'])
-        in_main_script = False
-        for line in config_script.split('\n'):
-            if app.config['CONFIG_PRE'] in line or line == '':
-                continue
-            if app.config['CONFIG_MAIN'] in line:
-                in_main_script = True
-                continue
-            if in_main_script:
-                self.main_script.append(line)
-            else:
-                self.pre_script.append(line)
 
+    def get_ci_script(self):
+        ci_script_name = self.setup.ci_script
+        ci_script_path = os.path.join(self.tmp_path, ci_script_name)
+        if not os.path.exists(ci_script_path):
+            raise KnownError('Repo has no CI script file: %s' % ci_script_name)
+        ci_script = open(ci_script_path, 'r').read()
+        self._log('found CI script: %s' % ci_script_name)
+        if self.setup.main_tag not in ci_script:
+            raise KnownError('Config has no divider: %s' % self.setup.main_tag)
+        current_script = []
+        for line in ci_script.split('\n'):
+            if self.setup.pre_tag in line or line == '':
+                current_script = self.pre_script
+                continue
+            if self.setup.main_tag in line:
+                current_script = self.main_script
+                continue
+            current_script.append(line)
 
     def main_build(self):
         try:
@@ -108,7 +157,6 @@ class Build(object):
             return True
 
     def execute(self, commands):
-        commands = commands.split('\n')
         for command in commands:
             if command.strip().startswith('#'):
                 self._log(command, 'SKIP> ')
@@ -142,30 +190,14 @@ class Build(object):
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
         self._log('Build finished at %s' % _now())
-        logs = []
-        if os.path.exists(app.config['LOG_FILE']):
-            logs = json.load(open(app.config['LOG_FILE'], 'r'))
+        logs = [log for log in Build.history() if log['build_id'] != self.uuid]
         logs.append(Build.log_info(self.uuid))
-        json.dump(logs, open(app.config['LOG_FILE'], 'w'), indent = 2)
+        self._save_logs(logs)
         if self.delete_after:
             os.remove(self.log_file)
 
-    @staticmethod
-    def log_info(build_id):
-        with open(_build_log_path(build_id), 'r') as logfile:
-            log = logfile.read()
-            datetime = re.search('Starting build at (.*)', log).groups()[0]
-            prelog = log
-            mainlog = None
-            prefin = LOG_PRE_FINISHED in log
-            if prefin:
-                prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
-                prelog += LOG_PRE_FINISHED
-            finished = LOG_FINISHED in log
-            term_error = TERMINAL_ERROR in log
-            status = locals()
-            del status['logfile']
-            return status
+    def _save_logs(self, logs):
+        json.dump(logs, open(app.config['LOG_FILE'], 'w'), indent = 2)
 
     def _message(self, message):
         with open(self.log_file, 'a') as logfile:
