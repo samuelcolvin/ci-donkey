@@ -14,7 +14,7 @@ def main_menu():
     return [{'page': page, 'name': name, 'active': ep == page} for page, name in pages]
 
 
-import FlaskCI.ci, FlaskCI.auth
+import FlaskCI.ui, FlaskCI.auth
 
 # for rule in app.url_map.iter_rules():
 #     print '%r' % rule

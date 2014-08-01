@@ -54,4 +54,6 @@ docs/_build/
 .DS_Store
 env/*
 users.json
+setup.json
+mytoken.txt
 FlaskCI/static/libs/
