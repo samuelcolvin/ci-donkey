@@ -70,14 +70,15 @@ def progress(id = None):
     else:
         return jsonify(**status)
 
-@app.route('/secret_build/<code>')
+@app.route('/secret_build/<code>', methods=('GET', 'POST'))
 def secret_build(code = None):
-    setup = obj = ci.setup_cls()
+    setup = ci.setup_cls()
     print 'request.data:', request.data
     time.sleep(0.5)
     if setup.secret_url != code:
         return 'Incorrect code', 403
-    build_id = ci.build()
+    # build_id = ci.build()
+    build_id = 'unknown'
     return 'building, build_id: %s' % build_id
 
 @app.route('/status.svg')
