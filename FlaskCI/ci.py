@@ -98,6 +98,7 @@ class Build(object):
         except Exception, e:
             raise e
         finally:
+            print '######### calling self._finish()'
             self._finish()
 
     def prebuild(self):
@@ -194,6 +195,7 @@ class Build(object):
 
     def _finish(self):
         # make sure log file has finished being written
+        print '######### about to sleep'
         time.sleep(2)
         print '######### starting finish'
         if self.delete_after and os.path.exists(self.tmp_path):

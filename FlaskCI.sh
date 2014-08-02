@@ -1,10 +1,10 @@
 # this is an example test script
 # <PRE SCRIPT>:
 virtualenv env
-env/bin/pip install -r requirements.txt
 echo "we haven't changed source so remember to manually call the correct python (or other script)"
+# env/bin/pip install -r requirements.txt
 #./env/bin/grablib grablib.json
-# this is wrong:
+# this is should fail:
 grablib grablib.json
 
 # <MAIN SCRIPT>:
