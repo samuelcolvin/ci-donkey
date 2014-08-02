@@ -73,12 +73,11 @@ def progress(id = None):
 @app.route('/secret_build/<code>', methods=('GET', 'POST'))
 def secret_build(code = None):
     try:
-        data = str(request.data)
-        req = json.loads(data)
+        req = request.get_json()
         open('/tmp/github_messages', 'a').write(json.dumps(req, indent=2) + '\n\n')
-        print json.dumps(req, indent=2)
     except Exception, e:
-        return api_error(e)
+        return 'request data did not contain valid json', 403
+    print request.header
     setup = ci.setup_cls()
     time.sleep(0.5)
     if setup.secret_url != code:
