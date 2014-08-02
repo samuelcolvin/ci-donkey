@@ -96,8 +96,9 @@ class Build(object):
             if not self.prebuild(): return
             if not self.main_build(): return
         except Exception, e:
+            self._finish()
             raise e
-        finally:
+        else:
             self._finish()
 
     def prebuild(self):
@@ -195,7 +196,7 @@ class Build(object):
     def _finish(self):
         # make sure log file has finished being written
         print '######### about to sleep'
-        self._special_sleep(2)
+        time.sleep(2)
         print '######### starting finish'
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
