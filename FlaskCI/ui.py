@@ -73,6 +73,7 @@ def progress(id = None):
 @app.route('/secret_build/<code>', methods=('POST',))
 def secret_build(code = None):
     try:
+        # we're not actually using these atm, but we might in future
         request_info = request.get_json()
         event_type =  request.headers.get('X-GitHub-Event')
         signature =   request.headers.get('X-Hub-Signature')
@@ -106,7 +107,7 @@ class SetupForm(Form):
 
     dft_secret_url = ''.join(random.choice(string.ascii_lowercase + \
         string.digits + string.ascii_uppercase) for i in range(60))
-    secret_url_descr = 'This will make up the which github pings after a push.'
+    secret_url_descr = 'This will make up the url which github pings. url: <domain>/secret_build/<secret>'
     secret_url = fields.TextField(u'Secret URL Argument', description = secret_url_descr,
         validators=[validators.required()], default = dft_secret_url)
 
