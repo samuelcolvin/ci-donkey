@@ -59,3 +59,4 @@ log.json
 mytoken.txt
 status.svg
 FlaskCI/static/libs/
+reload.wsgi

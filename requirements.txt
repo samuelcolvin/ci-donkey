@@ -22,4 +22,5 @@ six==1.7.3
 slimit==0.8.1
 smmap==0.8.2
 termcolor==1.1.0
+uWSGI==2.0.6
 wsgiref==0.1.2
