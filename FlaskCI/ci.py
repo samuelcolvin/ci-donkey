@@ -65,9 +65,9 @@ class Build(object):
             if prefin:
                 prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
                 prelog += LOG_PRE_FINISHED
-            finished = LOG_FINISHED in log
-            test_passed = TEST_ERROR not in log and finished
             term_error = TERMINAL_ERROR in log
+            finished = LOG_FINISHED in log or term_error
+            test_passed = TEST_ERROR not in log and finished and not term_error
             local = locals()
             status = {name: local[name] for name in 
             ['build_id', 'datetime', 'prelog', 'mainlog', 'prefin', 'term_error', 
@@ -98,7 +98,6 @@ class Build(object):
         except Exception, e:
             raise e
         finally:
-            print '######### calling self._finish()'
             self._finish()
 
     def prebuild(self):
@@ -196,8 +195,7 @@ class Build(object):
     def _finish(self):
         # make sure log file has finished being written
         print '######### about to sleep'
-        for i in range(10):
-            time.sleep(0.2)
+        self._special_sleep(2)
         print '######### starting finish'
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
@@ -211,6 +209,12 @@ class Build(object):
         if self.delete_after:
             os.remove(self.log_file)
             os.remove(Build._build_script_path(self.uuid))
+        print '######### deleted extra'
+
+    def _special_sleep(self, secs):
+        time_end = time.time() + secs
+        while time_end > time.time():
+            pass
 
     def _set_svg(self, passed):
         filename = 'passing.svg' if passed else 'failing.svg'
