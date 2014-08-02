@@ -41,6 +41,11 @@ Copy it to `available-sites` and enable it
     sudo cp deploy-setup/flaskci.conf /etc/nginx/sites-available/
     sudo ln -s /etc/nginx/sites-available/flaskci.conf /etc/nginx/sites-enabled/
 
+We've also enabled `auth_basic` in the conf file, so setup a password file, for this you need `apache-utils` installed:
+
+    sudo apt-get install apache2-utils
+    htpasswd -c flaskci.htpasswd <username>
+
 Check the user id for `www-data`
 
     id -u www-data
