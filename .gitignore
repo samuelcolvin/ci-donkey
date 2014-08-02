@@ -60,3 +60,4 @@ mytoken.txt
 status.svg
 FlaskCI/static/libs/
 reload.wsgi
+flaskci.htpasswd
