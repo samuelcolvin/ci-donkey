@@ -70,20 +70,20 @@ def progress(id = None):
     else:
         return jsonify(**status)
 
-@app.route('/secret_build/<code>', methods=('GET', 'POST'))
+@app.route('/secret_build/<code>', methods=('POST',))
 def secret_build(code = None):
     try:
-        req = request.get_json()
-        open('/tmp/github_messages', 'a').write(json.dumps(req, indent=2) + '\n\n')
-    except Exception, e:
-        return 'request data did not contain valid json', 403
-    print request.header
+        request_info = request.get_json()
+        event_type =  request.headers.get('X-GitHub-Event')
+        signature =   request.headers.get('X-Hub-Signature')
+        delivery_id = request.headers.get('X-Github-Delivery')
+    except:
+        pass
     setup = ci.setup_cls()
     time.sleep(0.5)
     if setup.secret_url != code:
         return 'Incorrect code', 403
-    # build_id = ci.build()
-    build_id = 'unknown'
+    build_id = ci.build()
     return 'building, build_id: %s' % build_id
 
 @app.route('/status.svg')
