@@ -92,14 +92,11 @@ class Build(object):
             self._log('clone url: %s' % self.url)
 
     def build(self):
-        try:
-            if not self.prebuild(): return
-            if not self.main_build(): return
-        except Exception, e:
+        if not self.prebuild():
             self._finish()
-            raise e
-        else:
-            self._finish()
+            return
+        self.main_build()
+        self._finish()
 
     def prebuild(self):
         try:
