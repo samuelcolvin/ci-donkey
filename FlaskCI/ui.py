@@ -107,7 +107,8 @@ class SetupForm(Form):
 
     dft_secret_url = ''.join(random.choice(string.ascii_lowercase + \
         string.digits + string.ascii_uppercase) for i in range(60))
-    secret_url_descr = 'This will make up the url which github pings. url: <domain>/secret_build/<secret>'
+    secret_url_descr = 'This will make up the url which github pings. url: http://&lt;domain&gt;/secret_build/&lt;secret&gt;'
+    build_id = 'unknown'
     secret_url = fields.TextField(u'Secret URL Argument', description = secret_url_descr,
         validators=[validators.required()], default = dft_secret_url)
 
