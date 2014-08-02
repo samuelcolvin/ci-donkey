@@ -119,6 +119,7 @@ class Build(object):
             return True
 
     def download(self):
+        self._log('cloning...')
         git.Git().clone(self.url, self.tmp_path)
         self._log('cloned code successfully')
 
@@ -192,7 +193,8 @@ class Build(object):
         self._message(TERMINAL_ERROR)
 
     def _finish(self):
-        time.sleep(1)
+        # make sure log file has finished being written
+        time.sleep(3)
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
         self._log('Build finished at %s' % _now())
