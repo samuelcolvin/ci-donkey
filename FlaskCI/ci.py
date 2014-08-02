@@ -92,10 +92,8 @@ class Build(object):
             self._log('clone url: %s' % self.url)
 
     def build(self):
-        if not self.prebuild():
-            self._finish()
-            return
-        self.main_build()
+        if self.prebuild():
+            self.main_build()
         self._finish()
 
     def prebuild(self):
@@ -193,12 +191,12 @@ class Build(object):
     def _finish(self):
         # make sure log file has finished being written
         print '######### about to sleep'
-        time.sleep(2)
+        self._log('Build finished at %s, cleaning up...' % _now())
+        self._special_sleep(2)
         print '######### starting finish'
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
         print '######### deleted tree'
-        self._log('Build finished at %s' % _now())
         logs = [log for log in Build.history() if log['build_id'] != self.uuid]
         log_info = Build.log_info(self.uuid, self.pre_script, self.main_script)
         logs.append(log_info)
