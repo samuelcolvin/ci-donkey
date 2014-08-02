@@ -2,9 +2,9 @@
 # <PRE SCRIPT>:
 virtualenv env
 env/bin/pip install -r requirements.txt
-grablib grablib.json
-echo "this is just an example"
+echo "we haven't changed source so remember to manually call the correct python (or other script)"
+./env/bin/grablib grablib.json
 
 # <MAIN SCRIPT>:
 # python manage.py test
-python sample_test.py
+./env/bin/python sample_test.py
