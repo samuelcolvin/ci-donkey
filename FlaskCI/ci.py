@@ -196,7 +196,8 @@ class Build(object):
     def _finish(self):
         # make sure log file has finished being written
         print '######### about to sleep'
-        time.sleep(2)
+        for i in range(10):
+            time.sleep(0.2)
         print '######### starting finish'
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
