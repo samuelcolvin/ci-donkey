@@ -73,7 +73,8 @@ def progress(id = None):
 @app.route('/secret_build/<code>', methods=('GET', 'POST'))
 def secret_build(code = None):
     try:
-        req = json.load(request.data)
+        data = str(request.data)
+        req = json.loads(data)
         open('/tmp/github_messages', 'a').write(json.dumps(req, indent=2) + '\n\n')
         print json.dumps(req, indent=2)
     except Exception, e:
