@@ -194,9 +194,11 @@ class Build(object):
 
     def _finish(self):
         # make sure log file has finished being written
-        time.sleep(3)
+        time.sleep(2)
+        print '######### starting finish'
         if self.delete_after and os.path.exists(self.tmp_path):
             shutil.rmtree(self.tmp_path, ignore_errors = False)
+        print '######### deleted tree'
         self._log('Build finished at %s' % _now())
         logs = [log for log in Build.history() if log['build_id'] != self.uuid]
         log_info = Build.log_info(self.uuid, self.pre_script, self.main_script)
@@ -219,8 +221,10 @@ class Build(object):
     def _message(self, message):
         with open(self.log_file, 'a') as logfile:
             logfile.write(message)
+            logfile.flush()
 
     def _log(self, line, prefix = '#> '):
         # print line
         with open(self.log_file, 'a') as logfile:
             logfile.write(prefix + line.strip('\n \t') + '\n')
+            logfile.flush()
