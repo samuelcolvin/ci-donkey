@@ -121,10 +121,24 @@ class User():
 
 users = UserManager(User)
 
-if len(users) == 0:
-    u = User('samuel@example.com', 'change me!')
+def first_user():
+    """
+    Sets up the first user so someone can login.
+    """
+    import getpass
+    email = raw_input('Enter email address of first user: ')
+    if email == '' or '@' not in email:
+        print 'Invalid email address entered'
+        first_user()
+    password = getpass.getpass()
+    u = User(email, password)
     u.active = True
     u.save()
+    print 'user %s successfully created' % email
+
+
+if len(users) == 0:
+    first_user()
 
 class LoginForm(Form):
     email = fields.TextField(validators=[validators.required(), validators.Email()])
