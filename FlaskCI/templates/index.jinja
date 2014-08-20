@@ -17,7 +17,7 @@
     {% for record in records %}
       <tr>
       {% for head in theadings %}
-        <td>{{ record[head] }}</td>
+        <td>{{ record[head]|safe }}</td>
       {% endfor %}
       </tr>
     {% endfor %}

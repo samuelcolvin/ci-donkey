@@ -4,22 +4,26 @@ to add users or reset passwords) but it should be secure.
 
 Make sure to change the username and password below!
 """
-from flask import url_for, redirect, request, render_template, flash
+from flask import url_for, redirect, request, render_template, flash, abort
 from flask_wtf import Form
 from wtforms import fields, validators
 from flask.ext import login
+from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from FlaskCI import app
-import os, json, uuid
+from . import app
+import os
+import json
+import uuid
+import time
 
 class UserManager(object):
     def __init__(self, model):
-        print 'loading users'
         self.model = model
-        self._objs = []
+        self.update()
+
+    def update(self):
         self._obj_file = app.config['USER_FILE']
-        if os.path.exists(self._obj_file):
-            self._objs = self._load()
+        self._objs = self._load() if os.path.exists(self._obj_file) else []
 
     def get(self, **kwargs):
         for obj in self._objs:
@@ -30,11 +34,18 @@ class UserManager(object):
         return [obj for obj in self._objs if 
             all(item in obj.items() for item in kwargs.items())]
 
+    def list_all(self):
+        return self._objs
+
     def add_item(self, item):
-        current = self.get(uuid = item.uuid)
+        current = self.get(uuid=item.uuid)
         if current:
             self._objs.remove(current)
         self._objs.append(item)
+
+    def delete_item(self, item_uuid):
+        item = self.get(uuid=item_uuid)
+        self._objs.remove(item)
 
     def save(self):
         json.dump(self._objs, open(self._obj_file, 'w'), indent = 2, cls = UserManager.Encoder)
@@ -57,23 +68,29 @@ class UserManager(object):
         return len(self._objs)
 
 class User():
-    _serialise = ['email', 'uuid', 'active', 'hash']
+    _serialise = ['email', 'uuid', 'active', 'admin', 'hash']
     _ser_marker = 'UserObject'
     invalid = 'INVALID'
 
-    def __init__(self, email = None, password = None):
+    def __init__(self, email = None, password = None, active = True, admin = False):
         self.email = email
         self.uuid = unicode(uuid.uuid4())
-        self.active = False
+        self.active = active
+        self.admin = admin
         self.set_password(password)
 
     def set_password(self, password):
         if password is None:
+            # if password is None it will bet set to invalid
+            # so the use cannot login
             self.hash = self.invalid
         else:
             self.hash = generate_password_hash(password)
 
     def check_password(self, password):
+        # this should make it pretty hard to crack passwords
+        # by brute force.
+        time.sleep(1)
         if self.hash == self.invalid:
             return False
         return check_password_hash(self.hash, password)
@@ -87,6 +104,9 @@ class User():
 
     def is_active(self):
         return self.active
+
+    def is_admin(self):
+        return self.admin
 
     def is_anonymous(self):
         return False
@@ -116,7 +136,7 @@ class User():
     def __isinstance__(data):
         return data.get('type', None) == User._ser_marker
 
-    def __unicode__(self):
+    def __str__(self):
         return self.email
 
 users = UserManager(User)
@@ -131,8 +151,7 @@ def first_user():
         print 'Invalid email address entered'
         first_user()
     password = getpass.getpass()
-    u = User(email, password)
-    u.active = True
+    u = User(email, password, True)
     u.save()
     print 'user %s successfully created' % email
 
@@ -152,7 +171,7 @@ class LoginForm(Form):
 
     def validate_password(self, fields):
         user = self.get_user()
-        if not user.check_password(self.password.data):
+        if user and not user.check_password(self.password.data):
             raise validators.ValidationError('Invalid password')
 
     def get_user(self):
@@ -174,13 +193,80 @@ def login_view():
         return redirect(request.args.get('next') or url_for('index'))
     return render_template('login.jinja', form = form)
 
-class RegistrationForm(Form):
-    email = fields.TextField(validators=[validators.required(), validators.Email()])
-    password = fields.PasswordField(validators=[validators.required()])
+def admin_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not (login.current_user.is_authenticated() and login.current_user.is_admin()):
+            return abort(403)
+        return func(*args, **kwargs)
+    return decorated_view
 
-    def validate_login(self, field):
+@app.route('/users')
+@admin_required
+def list_users():
+    users.update()
+    return render_template('edit_users.jinja', users=users.list_all())
+
+class UpdateUserForm(Form):
+    email = fields.TextField(validators=[validators.required(), validators.Email()])
+    password = fields.PasswordField()
+    active = fields.BooleanField(default = True)
+    admin = fields.BooleanField()
+
+@app.route('/user/<user_id>', methods=('GET', 'POST'))
+@admin_required
+def update_user(user_id):
+    users.update()
+    user = users.get(uuid=user_id)
+    form = UpdateUserForm(obj=user)
+    if form.validate_on_submit():
+        user.email = form.email.data
+        if form.password.data != '':
+            user.set_password(form.password.data)
+        user.active = form.active.data
+        user.admin = form.admin.data
+        user.save()
+        flash('Updated User: %s' % str(user))
+        return redirect(url_for('list_users'))
+    return render_template('edit_user.jinja', 
+                            form=form, 
+                            title='Update User', 
+                            user_id=user_id,
+                            user_email = user.email)
+
+class CreateUserForm(UpdateUserForm):
+    password = fields.PasswordField(validators=[validators.required()])
+    active = fields.BooleanField(default = True)
+    admin = fields.BooleanField()
+
+    def validate_email(self, field):
         if len(users.filter(email=self.email.data)) > 0:
             raise validators.ValidationError('Duplicate username')
+
+@app.route('/user/', methods=('GET', 'POST'))
+@admin_required
+def create_user():
+    users.update()
+    form = CreateUserForm()
+    if form.validate_on_submit():
+        user = User(form.email.data, 
+                    form.password.data, 
+                    form.active.data, 
+                    form.admin.data)
+        user.save()
+        flash('Created User: %s' % str(user))
+        return redirect(url_for('list_users'))
+    return render_template('edit_user.jinja', form = form, title='Create User')
+
+@app.route('/user/delete/<user_id>')
+@admin_required
+def delete_user(user_id):
+    users.update()
+    user = users.get(uuid=user_id)
+    users.delete_item(user_id)
+    users.save()
+    flash('Deleted User: %s' % str(user))
+    return redirect(url_for('list_users'))
 
 @app.route('/logout')
 @login.login_required

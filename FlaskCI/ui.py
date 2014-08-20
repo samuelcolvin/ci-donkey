@@ -1,10 +1,9 @@
 from flask import url_for, redirect, render_template
 from flask import flash, jsonify, request, send_file
-from flask.ext.login import login_required
+from flask.ext.login import login_required, current_user
 from flask_wtf import Form
 from wtforms import fields, validators
-from . import app
-from . import ci
+from . import app, ci, auth
 from datetime import datetime as dtdt
 import string
 import random
@@ -18,6 +17,17 @@ import cgi
 def api_error(e):
     traceback.print_exc()
     return '%s: %s' % (e.__class__.__name__, str(e)), 400
+
+@app.template_global()
+def main_menu():
+    ep = request.endpoint
+    if not current_user.is_authenticated():
+        return [{'page': 'login_view', 'name': 'Login', 'active': ep == 'login_view'}]
+    if current_user.is_admin():
+        pages = [('build', 'Build Now'), ('setup', 'Setup'), ('about', 'About')]
+    else:
+        pages = [('build', 'Build Now'), ('about', 'About')]
+    return [{'page': page, 'name': name, 'active': ep == page} for page, name in pages]
 
 @app.route('/')
 @login_required
@@ -44,9 +54,6 @@ def html_bool(b):
     glyph = 'ok' if b else 'remove'
     return '<span class="glyphicon glyphicon-%s"></span>' % glyph
 
-def html_escape(str):
-    return cgi.escape(str)
-
 @app.route('/build')
 @login_required
 def build():
@@ -67,8 +74,8 @@ def show_build(id = None):
             build_status = build_status,
             pre_build_log = log['prelog'],
             main_build_log = log['mainlog'],
-            pre_script = html_escape('\n'.join(log['pre_script'])),
-            main_script = html_escape('\n'.join(log['main_script']))
+            pre_script = '\n'.join(log['pre_script']),
+            main_script = '\n'.join(log['main_script'])
         )
 
 @app.route('/progress/<id>')
@@ -152,7 +159,7 @@ class SetupForm(Form):
 
 
 @app.route('/setup', methods=('GET', 'POST'))
-@login_required
+@auth.admin_required
 def setup():
     form = SetupForm.from_json()
     if form.validate_on_submit():

@@ -5,7 +5,7 @@
   <h3>Build</h3>
   <p id="build-message">
     {% if build_status %}
-      {{ build_status }}
+      {{ build_status|safe }}
     {% else %}
       building...
     {% endif %}
