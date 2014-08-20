@@ -38,6 +38,7 @@ def index():
     for log in logs:
         records.append({
             'Date': date_link(log),
+            'Trigger': log['trigger'],
             'Complete': html_bool(log['finished']),
             'Test Successful': html_bool(not log['term_error']),
             'Test Passed': html_bool(log['test_passed'])
@@ -90,24 +91,29 @@ def progress(id = None):
 
 @app.route('/secret_build/<code>', methods=('POST',))
 def secret_build(code = None):
+    event_type = 'unknown webhook'
+    author = None
+    message = None
+    url = None
     try:
         # we're not actually using these atm, but we might in future
-        request_info = request.get_json()
+        info = request.get_json()
         event_type =  request.headers.get('X-GitHub-Event')
-        signature =   request.headers.get('X-Hub-Signature')
-        delivery_id = request.headers.get('X-Github-Delivery')
-        data = [{'request_info': request_info, 'event_type': event_type,
-            'signature': signature, 'delivery_id': delivery_id}]
-        if os.path.exists('hooks.json'):
-            data = json.load(open('hooks.json', 'r')) + data
-        json.dump(data, open('hooks.json', 'w'), indent=2)
-    except:
-        pass
+        if event_type == 'push':
+            author = info['pusher']['name']
+            message = info['head_commit']['message']
+            url = info['head_commit']['url']
+        elif event_type == 'pull_request':
+            author = info['sender']['login']
+            message = info['pull_request']['title']
+            url = info['pull_request']['_links']['html']['href']
+    except Exception, e:
+        print 'Exception getting hook details: %r' % e
     setup = ci.setup_cls()
     time.sleep(0.5)
     if setup.secret_url != code:
         return 'Incorrect code', 403
-    build_id = 'xxx'# ci.build()
+    build_id = ci.build(trigger = event_type, message = message, url = url, author = author)
     return 'building, build_id: %s' % build_id
 
 @app.route('/status.svg')

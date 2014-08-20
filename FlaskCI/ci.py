@@ -22,8 +22,8 @@ def setup_cls():
         obj['datetime'] = dt_from_str(obj['datetime'])
         return type('CISetup', (), obj)
 
-def build(trigger = 'unknown'):
-    b = Build(trigger)
+def build(trigger=None, message=None, url=None, author=None):
+    b = Build(trigger=trigger, message=message, url=url, author=author)
     thread.start_new_thread(b.build, ())
     return b.uuid
 
@@ -46,13 +46,20 @@ LOG_FINISHED =     '#############      FINISHED      #############\n'
 
 
 class Build(object):
-    def __init__(self, trigger, delete_after = True):
+    def __init__(self, trigger, message, url, author, delete_after = True):
         self.setup = setup_cls()
         self.uuid = str(uuid.uuid4())
         self.delete_after = delete_after
         self.log_file = _build_log_path(self.uuid)
-        self._log('Build trigger %s' % trigger)
         self._log('Starting build at %s' % _now())
+        if trigger:
+            self._log('Build trigger %s' % trigger)
+        if message:
+            self._log('Build message %s' % message)
+        if url:
+            self._log('Build url %s' % url)
+        if url:
+            self._log('Author %s' % author)
         self._log('log filename: %s' % self.log_file)
         self.tmp_path = os.path.join(tempfile.gettempdir(), self.uuid)
         self._log('project directory: %s' % self.tmp_path)
@@ -67,10 +74,16 @@ class Build(object):
                 pre_script, main_script = json.load(open(script_path, 'r'))
         with open(_build_log_path(build_id), 'r') as logfile:
             log = logfile.read()
-            m = re.search('Starting build at (.*)', log)
-            datetime = m.groups()[0]
-            m = re.search('Build trigger (.*)', log)
-            trigger = m.groups()[0]
+            def getvalue(search):
+                m = re.search(search, log)
+                try: return m.groups()[0]
+                except: pass
+
+            datetime = getvalue('Starting build at (.*)')
+            trigger = getvalue('Build trigger (.*)')
+            message = getvalue('Build message (.*)')
+            url = getvalue('Build url (.*)')
+            author = getvalue('Author (.*)')
             prelog = log
             mainlog = None
             prefin = LOG_PRE_FINISHED in log
@@ -82,8 +95,8 @@ class Build(object):
             test_passed = TEST_ERROR not in log and finished and not term_error
             local = locals()
             status = {name: local[name] for name in 
-            ['build_id', 'datetime', 'trigger', 'prelog', 'mainlog', 'prefin', 
-            'term_error', 'finished', 'test_passed', 'pre_script', 'main_script']}
+            ['build_id', 'datetime', 'trigger', 'message', 'url', 'author', 'prelog', 'mainlog', 
+            'prefin', 'term_error', 'finished', 'test_passed', 'pre_script', 'main_script']}
             return status
 
     @staticmethod
