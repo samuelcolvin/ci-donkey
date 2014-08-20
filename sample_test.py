@@ -8,6 +8,7 @@ import unittest
 class Test(unittest.TestCase):
 
     def test_bar(self):
+        print '<h1>This should be escaped</h1>'
         print 'test bar, successful'
 
     def test_foo(self):

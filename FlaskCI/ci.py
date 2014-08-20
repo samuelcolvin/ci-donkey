@@ -180,9 +180,9 @@ class Build(object):
                     stdout = subprocess.PIPE,
                     stderr = subprocess.PIPE)
                 stdout, stderr = p.communicate()
+                self._log(stdout, '')
                 if p.returncode != 0:
                     raise CommandError(stderr)
-                self._log(stdout, '')
             except CommandError, e:
                 raise e
             except Exception, e:

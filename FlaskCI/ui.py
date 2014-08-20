@@ -69,7 +69,7 @@ def show_build(id = None):
             main_build_log = log['mainlog'],
             pre_script = html_escape('\n'.join(log['pre_script'])),
             main_script = html_escape('\n'.join(log['main_script']))
-            )
+        )
 
 @app.route('/progress/<id>')
 @login_required
