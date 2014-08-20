@@ -38,8 +38,8 @@ def index():
     for log in logs:
         records.append({
             'Date': date_link(log),
-            'Trigger': log['trigger'],
-            'Author': log['author'],
+            'Trigger': log.get('trigger', ''),
+            'Author': log.get('author', ''),
             'Complete': html_bool(log['finished']),
             'Test Successful': html_bool(not log['term_error']),
             'Test Passed': html_bool(log['test_passed'])
