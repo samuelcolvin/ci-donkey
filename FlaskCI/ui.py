@@ -43,7 +43,7 @@ def index():
             'Test Successful': html_bool(not log['term_error']),
             'Test Passed': html_bool(log['test_passed'])
             })
-    theadings = ('Date', 'Complete', 'Test Successful', 'Test Passed')
+    theadings = ('Date', 'Trigger', 'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', records = records, theadings = theadings)
 
 def date_link(log):
@@ -76,7 +76,8 @@ def show_build(id = None):
             pre_build_log = log['prelog'],
             main_build_log = log['mainlog'],
             pre_script = '\n'.join(log['pre_script']),
-            main_script = '\n'.join(log['main_script'])
+            main_script = '\n'.join(log['main_script']),
+            log_extra = log
         )
 
 @app.route('/progress/<id>')

@@ -55,7 +55,7 @@ class Build(object):
         if trigger:
             self._log('Build trigger %s' % trigger)
         if message:
-            self._log('Build message %s' % message)
+            self._log('Build message "%s"' % message)
         if url:
             self._log('Build url %s' % url)
         if url:
@@ -81,7 +81,7 @@ class Build(object):
 
             datetime = getvalue('Starting build at (.*)')
             trigger = getvalue('Build trigger (.*)')
-            message = getvalue('Build message (.*)')
+            message = getvalue('Build message "(.*?)"')
             url = getvalue('Build url (.*)')
             author = getvalue('Author (.*)')
             prelog = log
