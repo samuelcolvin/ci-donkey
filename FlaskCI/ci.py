@@ -22,8 +22,8 @@ def setup_cls():
         obj['datetime'] = dt_from_str(obj['datetime'])
         return type('CISetup', (), obj)
 
-def build():
-    b = Build()
+def build(trigger = 'unknown'):
+    b = Build(trigger)
     thread.start_new_thread(b.build, ())
     return b.uuid
 
@@ -46,11 +46,12 @@ LOG_FINISHED =     '#############      FINISHED      #############\n'
 
 
 class Build(object):
-    def __init__(self, delete_after = True):
+    def __init__(self, trigger, delete_after = True):
         self.setup = setup_cls()
         self.uuid = str(uuid.uuid4())
         self.delete_after = delete_after
         self.log_file = _build_log_path(self.uuid)
+        self._log('Build trigger %s' % trigger)
         self._log('Starting build at %s' % _now())
         self._log('log filename: %s' % self.log_file)
         self.tmp_path = os.path.join(tempfile.gettempdir(), self.uuid)
@@ -68,6 +69,8 @@ class Build(object):
             log = logfile.read()
             m = re.search('Starting build at (.*)', log)
             datetime = m.groups()[0]
+            m = re.search('Build trigger (.*)', log)
+            trigger = m.groups()[0]
             prelog = log
             mainlog = None
             prefin = LOG_PRE_FINISHED in log
@@ -79,8 +82,8 @@ class Build(object):
             test_passed = TEST_ERROR not in log and finished and not term_error
             local = locals()
             status = {name: local[name] for name in 
-            ['build_id', 'datetime', 'prelog', 'mainlog', 'prefin', 'term_error', 
-            'finished', 'test_passed', 'pre_script', 'main_script']}
+            ['build_id', 'datetime', 'trigger', 'prelog', 'mainlog', 'prefin', 
+            'term_error', 'finished', 'test_passed', 'pre_script', 'main_script']}
             return status
 
     @staticmethod

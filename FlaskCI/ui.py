@@ -57,7 +57,7 @@ def html_bool(b):
 @app.route('/build')
 @login_required
 def build():
-    build_id = ci.build()
+    build_id = ci.build('manual')
     return render_template('build.jinja', pogress_url = url_for('progress', id = build_id))
 
 @app.route('/show_build/<id>')
@@ -96,13 +96,18 @@ def secret_build(code = None):
         event_type =  request.headers.get('X-GitHub-Event')
         signature =   request.headers.get('X-Hub-Signature')
         delivery_id = request.headers.get('X-Github-Delivery')
+        data = [{'request_info': request_info, 'event_type': event_type,
+            'signature': signature, 'delivery_id': delivery_id}]
+        if os.path.exists('hooks.json'):
+            data = json.load(open('hooks.json', 'r')) + data
+        json.dump(data, open('hooks.json', 'w'), indent=2)
     except:
         pass
     setup = ci.setup_cls()
     time.sleep(0.5)
     if setup.secret_url != code:
         return 'Incorrect code', 403
-    build_id = ci.build()
+    build_id = 'xxx'# ci.build()
     return 'building, build_id: %s' % build_id
 
 @app.route('/status.svg')

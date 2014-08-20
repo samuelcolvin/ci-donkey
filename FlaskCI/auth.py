@@ -90,7 +90,7 @@ class User():
     def check_password(self, password):
         # this should make it pretty hard to crack passwords
         # by brute force.
-        time.sleep(1)
+        time.sleep(0.5)
         if self.hash == self.invalid:
             return False
         return check_password_hash(self.hash, password)
