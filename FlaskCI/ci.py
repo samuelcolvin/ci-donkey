@@ -117,6 +117,7 @@ class Build(object):
             self._save_logs(logs)
 
             self.set_url()
+            self._set_svg('in_progress')
             self.download()
             self.get_ci_script()
             self.execute(self.pre_script)
@@ -216,8 +217,11 @@ class Build(object):
             os.remove(self.log_file)
             os.remove(Build._build_script_path(self.uuid))
 
-    def _set_svg(self, passed):
-        filename = 'passing.svg' if passed else 'failing.svg'
+    def _set_svg(self, status):
+        if status == 'in_progress':
+            filename = 'in_progress.svg'
+        else:
+            filename = 'passing.svg' if status else 'failing.svg'
         thisdir = os.path.dirname(__file__)
         src = os.path.join(thisdir, 'static', filename)
         shutil.copyfile(src, app.config['STATUS_SVG_FILE'])
