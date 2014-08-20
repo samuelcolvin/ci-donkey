@@ -39,11 +39,12 @@ def index():
         records.append({
             'Date': date_link(log),
             'Trigger': log['trigger'],
+            'Author': log['author'],
             'Complete': html_bool(log['finished']),
             'Test Successful': html_bool(not log['term_error']),
             'Test Passed': html_bool(log['test_passed'])
             })
-    theadings = ('Date', 'Trigger', 'Complete', 'Test Successful', 'Test Passed')
+    theadings = ('Date', 'Trigger', 'Author', 'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', records = records, theadings = theadings)
 
 def date_link(log):
