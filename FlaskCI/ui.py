@@ -110,7 +110,7 @@ def status_svg():
     if not os.path.exists(app.config['STATUS_SVG_FILE']):
         return 'no builds, no status file', 400
     svg_path = os.path.join('..', app.config['STATUS_SVG_FILE'])
-    return send_file(svg_path, mimetype = 'image/svg+xml', headers = {'Cache-Control': 'no-cache'})
+    return send_file(svg_path, mimetype = 'image/svg+xml', cache_timeout=0)
 
 class SetupForm(Form):
     name = fields.TextField(u'CI Project Name', validators=[validators.required()])
