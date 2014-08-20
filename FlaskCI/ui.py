@@ -1,12 +1,19 @@
 from flask import url_for, redirect, render_template
 from flask import flash, jsonify, request, send_file
-from FlaskCI import app
 from flask.ext.login import login_required
 from flask_wtf import Form
 from wtforms import fields, validators
-import string, random, json, os, traceback, time, pytz
+from . import app
+from . import ci
 from datetime import datetime as dtdt
-import ci
+import string
+import random
+import json
+import os
+import traceback
+import time
+import pytz
+import cgi
 
 def api_error(e):
     traceback.print_exc()
@@ -37,6 +44,9 @@ def html_bool(b):
     glyph = 'ok' if b else 'remove'
     return '<span class="glyphicon glyphicon-%s"></span>' % glyph
 
+def html_escape(str):
+    return cgi.escape(str)
+
 @app.route('/build')
 @login_required
 def build():
@@ -57,8 +67,9 @@ def show_build(id = None):
             build_status = build_status,
             pre_build_log = log['prelog'],
             main_build_log = log['mainlog'],
-            pre_script = '\n'.join(log['pre_script']),
-            main_script = '\n'.join(log['main_script']))
+            pre_script = html_escape('\n'.join(log['pre_script'])),
+            main_script = html_escape('\n'.join(log['main_script']))
+            )
 
 @app.route('/progress/<id>')
 @login_required

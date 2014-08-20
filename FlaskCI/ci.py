@@ -1,8 +1,17 @@
-import subprocess, shlex
 from datetime import datetime as dtdt
-from FlaskCI import app
-import git, uuid, os, json, re, thread
-import traceback, shutil, re, time, tempfile
+from . import app
+import subprocess
+import shlex
+import git
+import uuid
+import os
+import json
+import re
+import thread
+import traceback
+import shutil
+import time
+import tempfile
 
 def dt_from_str(dstr):
     return dtdt.strptime(dstr, app.config['DATETIME_FORMAT'])
