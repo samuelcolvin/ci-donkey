@@ -59,5 +59,8 @@ log.json
 mytoken.txt
 status.svg
 FlaskCI/static/libs/
+FlaskCI-test/
+localsettings.py
 reload.wsgi
 flaskci.htpasswd
+
