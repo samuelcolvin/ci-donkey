@@ -1,4 +1,4 @@
-DEBUG = True
+DEBUG = False
 SECRET_KEY = '!! change or overwrite me !!'
 USER_FILE = 'users.json'
 SETUP_FILE = 'setup.json'
