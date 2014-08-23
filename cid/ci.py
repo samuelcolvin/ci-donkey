@@ -68,6 +68,7 @@ class Build(object):
         self._log('project directory: %s' % self.repo_path)
         self.pre_script = []
         self.main_script = []
+        self.badge_updates = False
 
     def set_url(self):
         self.url = self.build_info.get('git_url', None)
@@ -81,6 +82,23 @@ class Build(object):
             self._log('clone url: %s' % self.url.replace(t, '<token>'))
         else:
             self._log('clone url: %s' % self.url)
+
+    def decide_badge_updates(self):
+        """
+        decide whether we are on the default branch on the main repo,
+        if so the badge will get updated, otherwise not.
+        """
+        if self.url != self.setup.git_url:
+            self._log('git url is not the main repo, no badge updates')
+            return False
+        if 'default_branch' not in self.build_info:
+            self._log('master_branch not in build_info, no badge updates')
+            return False
+        if not self.build_info.get('label', '').endswith(self.build_info['default_branch']):
+            self._log('not on default_branch, no badge updates')
+            return False
+        self._log('detected default branch, badge will be updated')
+        return True
 
     def build(self):
         try:
@@ -99,6 +117,7 @@ class Build(object):
             self._save_logs(logs)
 
             self.set_url()
+            self.badge_updates = self.decide_badge_updates()
             self._set_svg('in_progress')
             self.download()
             self.get_ci_script()
@@ -212,6 +231,8 @@ class Build(object):
         return logs
 
     def _set_svg(self, status):
+        if not self.badge_updates:
+            return
         if status == 'in_progress':
             filename = 'in_progress.svg'
         else:

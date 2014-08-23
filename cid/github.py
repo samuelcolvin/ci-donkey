@@ -9,11 +9,6 @@ def process_request(request, allowed_hooks):
     info = OrderedDict([
         ('trigger', 'unknown webhook'),
         ('author', None),
-        ('message', None),
-        ('display_url', None),
-        ('private', None),
-        ('git_url', None),
-        ('sha', None)
     ])
     try:
         rjson = request.get_json()
@@ -26,6 +21,7 @@ def process_request(request, allowed_hooks):
             info['display_url'] = rjson['head_commit']['url']
             info['private'] = rjson['repository']['private']
             info['git_url'] = rjson['repository']['git_url']
+            info['default_branch'] = rjson['repository']['default_branch']
             info['sha'] = rjson['head_commit']['id']
             info['label'] = rjson['ref']
         elif info['trigger'] == 'pull_request':
