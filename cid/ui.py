@@ -22,11 +22,17 @@ def api_error(e):
 def main_menu():
     ep = request.endpoint
     if not current_user.is_authenticated():
-        return [{'page': 'login_view', 'name': 'Login', 'active': ep == 'login_view'}]
-    if current_user.is_admin():
-        pages = [('build', 'Build Now'), ('setup', 'Setup'), ('about', 'About')]
+        pages = [(url_for('login_view'), 'Login')]
     else:
-        pages = [('build', 'Build Now'), ('about', 'About')]
+        if current_user.is_admin():
+            pages = [(url_for('build'), 'Build Now'), (url_for('setup'), 'Setup')]#, ('about', 'About')
+        else:
+            pages = [(url_for('build'), 'Build Now')]#, ('about', 'About')
+        url = ci.setup_cls().git_url
+        if url != '':
+            if url.startswith('git://'):
+                url = url.replace('git://', 'https://')
+            pages += [(url, 'Github')]
     return [{'page': page, 'name': name, 'active': ep == page} for page, name in pages]
 
 @app.route('/')
@@ -45,7 +51,10 @@ def index():
             'Test Passed': log['test_passed']
             })
     theadings = ('Date', 'Trigger', 'Author', 'Complete', 'Test Successful', 'Test Passed')
-    return render_template('index.jinja', records = records, theadings = theadings)
+    return render_template('index.jinja', 
+                            records = records, 
+                            theadings = theadings, 
+                            project_url = ci.setup_cls().git_url)
 
 def date_link(log):
     dt = ci.dt_from_str(log['datetime']).replace(tzinfo = pytz.utc)
@@ -204,6 +213,6 @@ def setup():
         return redirect(url_for('index'))
     return render_template('setup.jinja', form = form)
 
-@app.route('/about')
-def about():
-    return render_template('about.jinja')
+# @app.route('/about')
+# def about():
+#     return render_template('about.jinja')
