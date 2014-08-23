@@ -1,4 +1,5 @@
 from datetime import datetime as dtdt
+from flask import url_for
 from . import app
 import subprocess
 import shlex
@@ -157,10 +158,17 @@ class Build(object):
         if not self.valid_token:
             self._log('WARNING: no valid token found, cannot update status of pull request')
             return
+        try:
+            if self.setup.this_url == '':
+                raise Exception('this_url is null')
+            target_url = os.path.join(self.setup.this_url, url_for('show_build', id = self.stamp))
+        except Exception, e:
+            self._log('error getting target_url for status update: %r' % e)
+            target_url = 'https://github.com/samuelcolvin/ci-donkey'
         payload = {'state': status, 
                    'description': message, 
                    'context': 'ci-donkey', 
-                   'target_url': 'http://www.scolvin.com'
+                   'target_url': target_url
         }
         payload = json.dumps(payload)
         headers = {'Authorization': 'token %s' % self.token}
@@ -260,7 +268,7 @@ class Build(object):
         logs.append(linfo)
         self._save_logs(logs)
         if linfo['test_passed']:
-            self._update_status('success', 'CI Success whoooh')
+            self._update_status('success', 'CI Success')
         else:
             if linfo['term_error']:
                 self._update_status('error', 'Error running tests')

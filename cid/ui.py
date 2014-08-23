@@ -120,9 +120,13 @@ class SetupForm(Form):
     url_descr = 'This should be the https url for github.'
     git_url = fields.TextField('Git URL', validators=[validators.required()], description = url_descr)
 
+    this_url_descr = 'URL of this site, used for "datails" on pull request statuses.'
+    this_url = fields.TextField('CI site URL', description = this_url_descr)
+
     token_descr = 'See <a href="https://help.github.com/articles/creating-an'\
         '-access-token-for-command-line-use">here</a> for details on how create a token. '\
-        'The token needs the "repo" scope to clone private repos. Leave blank for public repos.'
+        'The token needs the "repo" scope to clone private repos. Used for cloning on private repos '\
+        'and for updating pull request statuses on all repos.'
     github_token = fields.TextField(u'Github Token', description = token_descr)
 
     allowed_hooks_descr = 'Comma seperated list of webooks to accept from github, '\
@@ -152,8 +156,8 @@ class SetupForm(Form):
     save_repo_descr = 'If checked the cloned repo will be kept after CI is complete, otherwise it will be deleted perminently.'
     save_repo = fields.BooleanField('Save Repo', description=save_repo_descr, default=False)
 
-    save_dir_descr = """Directory to save copies of the repo in (only used if "Save Repo" is checked).
-         Should have write permissions ci-donkey user."""
+    save_dir_descr = 'Directory to save copies of the repo in (only used if "Save Repo" is checked).'\
+         'hould have write permissions ci-donkey user.'
     save_dir = fields.TextField('Save Directory', description=save_dir_descr)
 
     def validate_save_dir(self, field):
