@@ -165,6 +165,8 @@ class Build(object):
         payload = json.dumps(payload)
         headers = {'Authorization': 'token %s' % self.token}
         url = self.setup.git_url
+        if url.startswith('git://'):
+            url = self.url.replace('git://', 'https://')
         if url.endswith('.git'):
             url = url[:-4]
         else:
