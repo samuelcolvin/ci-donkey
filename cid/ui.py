@@ -127,7 +127,7 @@ class SetupForm(Form):
 
     allowed_hooks_descr = 'Comma seperated list of webooks to accept from github, '\
         '<a href="https://developer.github.com/v3/repos/hooks/">see here for details</a>.'\
-        'Normally push and pull_request will suffice'
+        'Normally push and pull_request will suffice.'
     allowed_hooks = fields.TextField('Webhooks', description = allowed_hooks_descr,
         validators=[validators.required()], default = 'push, pull_request')
 
@@ -185,7 +185,8 @@ class SetupForm(Form):
     @staticmethod
     def from_json():
         obj = ci.setup_cls()
-        obj.allowed_hooks = ', '.join(getattr(obj, 'allowed_hooks', []))
+        if hasattr(obj, 'allowed_hooks'):
+            obj.allowed_hooks = ', '.join(obj.allowed_hooks)
         return SetupForm(obj = obj) if obj else SetupForm()
 
 
