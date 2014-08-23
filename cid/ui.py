@@ -103,7 +103,7 @@ def secret_build(code = None):
     approved, hook_info = github.process_request(request, cisetup.allowed_hooks)
     if not approved:
         return str(hook_info), 200
-        
+
     build_id = ci.build(hook_info)
     return 'building, build_id: %s' % build_id
 
@@ -185,7 +185,7 @@ class SetupForm(Form):
     @staticmethod
     def from_json():
         obj = ci.setup_cls()
-        obj.allowed_hooks = ', '.join(obj.allowed_hooks)
+        obj.allowed_hooks = ', '.join(getattr(obj, 'allowed_hooks', []))
         return SetupForm(obj = obj) if obj else SetupForm()
 
 
