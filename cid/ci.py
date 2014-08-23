@@ -56,7 +56,7 @@ class Build(object):
     def __init__(self, build_info):
         self.setup = setup_cls()
         self.token = self.setup.github_token
-        self.valid_token = isinstance(self.token, str) and len(self.token) > 0
+        self.valid_token = isinstance(self.token, basestring) and len(self.token) > 0
         self.stamp = _now()# str(uuid.uuid4())
         self.delete_after = not self.setup.save_repo
         self.log_file = _build_log_path(self.stamp)
