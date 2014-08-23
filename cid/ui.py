@@ -145,7 +145,7 @@ class SetupForm(Form):
 
     ci_script_descr = 'This is the file which is split then ran to test the project.'
     ci_script = fields.TextField(u'CI Script Name', description = ci_script_descr,
-        validators=[validators.required()], default = 'FlaskCI.sh')
+        validators=[validators.required()], default = 'cidonkey.sh')
 
     pre_tag_descr = 'Tag signifying beginning of pre test script.'
     pre_tag = fields.TextField(u'CI Script Name', description = pre_tag_descr,

@@ -1,3 +1,3 @@
-import FlaskCI.auth
+import cid.auth
 
 

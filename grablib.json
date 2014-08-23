@@ -1,5 +1,5 @@
 {
-  "libs_root": "FlaskCI/static/libs",
+  "libs_root": "cid/static/libs",
   "sites":
   {
     "github": "https://raw.githubusercontent.com",

@@ -1,7 +1,7 @@
-FlaskCI
+ci-donkey
 =======
 
-Simple Continuous Integration System based on Flask
+Simple Continuous Integration
 
 
 ## Basic Setup
@@ -9,8 +9,8 @@ Simple Continuous Integration System based on Flask
 Run the following:
 
     cd /var/www/
-    git clone git@github.com:samuelcolvin/FlaskCI.git
-    cd FlaskCI/
+    git clone git@github.com:samuelcolvin/ci-donkey.git
+    cd ci-donkey/
     virtualenv env
     source env/bin/activate
     pip install -r requirements.txt 
@@ -30,35 +30,35 @@ If you haven't run the dev server there will be no initial user to login with, y
 
 If will prompt you to create a user if none exist.
 
-We're going to run FlaskCI as the `www-data` user, make them the group for your project directory:
+We're going to run ci-donkey as the `www-data` user, make them the group for your project directory:
 
-    sudo chown -R samuel:www-data /var/www/FlaskCI
+    sudo chown -R samuel:www-data /var/www/ci-donkey
 
-Edit the `conf` file to set your server, template in `deploy-setup/flaskci.conf`
+Edit one of the `conf` files in `setup/` to set your server
 
 Copy it to `available-sites` and enable it
 
-    sudo cp deploy-setup/flaskci.conf /etc/nginx/sites-available/
-    sudo ln -s /etc/nginx/sites-available/flaskci.conf /etc/nginx/sites-enabled/
+    sudo cp setup/<conf file>.conf /etc/nginx/sites-available/cid.conf
+    sudo ln -s /etc/nginx/sites-available/cid.conf /etc/nginx/sites-enabled/
 
-We've also enabled `auth_basic` in the conf file, so setup a password file, for this you need `apache-utils` installed:
+If you used `basic-auth` in your conf file, you need to setup a password file, for this you need `apache-utils` installed:
 
     sudo apt-get install apache2-utils
-    htpasswd -c flaskci.htpasswd <username>
+    htpasswd -c cid.htpasswd <username>
 
 Check the user id for `www-data`
 
     id -u www-data
 
-set `uid` and `gid` to that value in `deploy-setup/uwsgi.ini`
+set `uid` and `gid` to that value in `setup/uwsgi.ini`
 
 Start `uwsgi`:
 
-    sudo /var/www/FlaskCI/env/bin/uwsgi --ini /var/www/FlaskCI/deploy-setup/uwsgi.ini
+    sudo /var/www/ci-donkey/env/bin/uwsgi --ini /var/www/ci-donkey/setup/uwsgi.ini
 
 You can check the log to see if it's started ok:
 
-    sudo tail -n 100 /var/log/flaskci-uwsgi.log
+    sudo tail -n 100 /var/log/cid-uwsgi.log
 
 If everything has gone ok you can restart nginx:
 
