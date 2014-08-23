@@ -69,44 +69,6 @@ class Build(object):
         self.pre_script = []
         self.main_script = []
 
-    @staticmethod
-    def log_info(build_id, pre_script = None, main_script = None):
-        if pre_script == None and main_script == None:
-            script_path = Build._build_script_path(build_id)
-            if os.path.exists(script_path):
-                pre_script, main_script = json.load(open(script_path, 'r'))
-        with open(_build_log_path(build_id), 'r') as logfile:
-            log = logfile.read()
-            status = {'build_id': build_id}
-            status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
-            try:
-                status.update(json.loads(log[:log.index(END_OF_BS)]))
-            except Exception:
-                print 'error processing json build info from log %s' % build_id
-            prelog = log
-            mainlog = None
-            prefin = LOG_PRE_FINISHED in log
-            if prefin:
-                prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
-                prelog += LOG_PRE_FINISHED
-            term_error = TERMINAL_ERROR in log
-            finished = CLEANED_UP in log or term_error
-            status['test_passed'] = TEST_ERROR not in log and finished and not term_error
-            status['prelog'] = prelog
-            status['mainlog'] = mainlog
-            status['term_error'] = term_error
-            status['finished'] = finished
-            status['pre_script'] = pre_script
-            status['main_script'] = main_script
-            return status
-
-    @staticmethod
-    def history():
-        logs = []
-        if os.path.exists(app.config['LOG_FILE']):
-            logs = json.load(open(app.config['LOG_FILE'], 'r'))
-        return logs
-
     def set_url(self):
         self.url = self.build_info.get('git_url', self.setup.git_url)
         private = self.build_info.get('private', True)
@@ -130,8 +92,8 @@ class Build(object):
     def prebuild(self):
         try:
             # first we save a blank log item so it's in history
-            logs = Build.history()
-            logs.append(Build.log_info(self.stamp))
+            logs = history()
+            logs.append(log_info(self.stamp))
             self._save_logs(logs)
 
             self.set_url()
@@ -174,11 +136,7 @@ class Build(object):
                 continue
             current_script.append(line)
         obj = (self.pre_script, self.main_script)
-        json.dump(obj, open(Build._build_script_path(self.stamp), 'w'), indent = 2)
-
-    @staticmethod
-    def _build_script_path(id):
-        return os.path.join('/tmp', id + '.script')
+        json.dump(obj, open(build_script_path(self.stamp), 'w'), indent = 2)
 
     def main_build(self):
         try:
@@ -235,14 +193,21 @@ class Build(object):
             self.execute(['git clean -f -d -X'])
         self._message(CLEANED_UP)
         time.sleep(2)
-        logs = [log for log in Build.history() if log['build_id'] != self.stamp]
-        log_info = Build.log_info(self.stamp, self.pre_script, self.main_script)
-        logs.append(log_info)
-        self._set_svg(log_info['test_passed'])
+        logs = [log for log in history() if log['build_id'] != self.stamp]
+        linfo = log_info(self.stamp, self.pre_script, self.main_script)
+        logs.append(linfo)
         self._save_logs(logs)
+        self._set_svg(linfo['test_passed'])
         if self.delete_after:
             os.remove(self.log_file)
-            os.remove(Build._build_script_path(self.stamp))
+            os.remove(build_script_path(self.stamp))
+
+    def _save_logs(self, logs):
+        max_len = app.config['MAX_LOG_LENGTH']
+        if max_len:
+            logs = logs[-max_len:]
+        json.dump(logs, open(app.config['LOG_FILE'], 'w'), indent = 2)
+        return logs
 
     def _set_svg(self, status):
         if status == 'in_progress':
@@ -252,9 +217,6 @@ class Build(object):
         thisdir = os.path.dirname(__file__)
         src = os.path.join(thisdir, 'static', filename)
         shutil.copyfile(src, app.config['STATUS_SVG_FILE'])
-
-    def _save_logs(self, logs):
-        json.dump(logs, open(app.config['LOG_FILE'], 'w'), indent = 2)
 
     def _message(self, message):
         with open(self.log_file, 'a') as logfile:
@@ -266,3 +228,47 @@ class Build(object):
 
     def _log(self, line, prefix = '#> '):
         self._message(prefix + line.strip('\n \t'))
+
+
+def log_info(build_id, pre_script = None, main_script = None):
+    if pre_script == None and main_script == None:
+        script_path = build_script_path(build_id)
+        if os.path.exists(script_path):
+            pre_script, main_script = json.load(open(script_path, 'r'))
+    with open(_build_log_path(build_id), 'r') as logfile:
+        log = logfile.read()
+        status = {'build_id': build_id}
+        status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
+        try:
+            status.update(json.loads(log[:log.index(END_OF_BS)]))
+        except Exception:
+            print 'error processing json build info from log %s' % build_id
+        prelog = log
+        mainlog = None
+        prefin = LOG_PRE_FINISHED in log
+        if prefin:
+            prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
+            prelog += LOG_PRE_FINISHED
+        term_error = TERMINAL_ERROR in log
+        finished = LOG_FINISHED in log or term_error
+        processing_complete = CLEANED_UP in log or term_error
+        status['test_passed'] = TEST_ERROR not in log and finished and not term_error
+        status['prelog'] = prelog
+        status['mainlog'] = mainlog
+        status['term_error'] = term_error
+        status['finished'] = finished
+        status['processing_complete'] = processing_complete
+        status['pre_script'] = pre_script
+        status['main_script'] = main_script
+        # import pprint
+        # pprint.pprint(status)
+        return status
+
+def history():
+    logs = []
+    if os.path.exists(app.config['LOG_FILE']):
+        logs = json.load(open(app.config['LOG_FILE'], 'r'))
+    return logs
+
+def build_script_path(id):
+    return os.path.join('/tmp', id + '.script')

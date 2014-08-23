@@ -5,6 +5,9 @@ SETUP_FILE = 'setup.json'
 LOG_FILE = 'log.json'
 STATUS_SVG_FILE = 'status.svg'
 SITE_TITLE = 'Flask CI'
+# maximum number of log items in LOG_FILE before they are trimmed
+# None for no limit
+MAX_LOG_LENGTH = 50
 # don't change this, it's used in the path and python
 # can be temperamental about odd chacacters
 DATETIME_FORMAT = '%s_%a_%d-%b-%Y_%H-%M-%S'

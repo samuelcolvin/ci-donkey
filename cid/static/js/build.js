@@ -17,7 +17,7 @@ function update(){
 	  	$('#main-build').text(data.mainlog);
 	  }
 
-	  if (data.finished){
+	  if (data.processing_complete){
 	  	finished('Build Finished');
 	  }
 
@@ -38,5 +38,6 @@ function finished(message){
 }
 
 if (pogress_url != ''){
+  update();
 	var clear_check = setInterval(update, 2000);
 }

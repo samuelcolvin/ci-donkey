@@ -32,7 +32,7 @@ def main_menu():
 @app.route('/')
 @login_required
 def index():
-    logs = ci.Build.history()
+    logs = ci.history()
     logs.reverse()
     records = []
     for log in logs:
@@ -65,7 +65,7 @@ def build():
 @app.route('/show_build/<id>')
 @login_required
 def show_build(id = None):
-    logs = ci.Build.history()
+    logs = ci.history()
     log = (log for log in logs if log['build_id'] == id).next()
     if not log['finished']:
         return render_template('build.jinja', pogress_url = url_for('progress', id = id))
@@ -87,7 +87,7 @@ def show_build(id = None):
 @login_required
 def progress(id = None):
     try:
-        status = ci.Build.log_info(id)
+        status = ci.log_info(id)
     except Exception, e:
         return api_error(e)
     else:
