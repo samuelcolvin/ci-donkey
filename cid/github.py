@@ -19,7 +19,7 @@ def process_request(request, allowed_hooks):
         rjson = request.get_json()
         info['event_type'] =  request.headers.get('X-GitHub-Event')
         if info['event_type'] not in allowed_hooks:
-            return False, '"%s" is not an allowed webhook.'
+            return False, '"%s" is not an allowed webhook.' % info['event_type']
         if info['event_type'] == 'push':
             info['author'] = rjson['pusher']['name']
             info['message'] = rjson['head_commit']['message']
