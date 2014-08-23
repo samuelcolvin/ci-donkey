@@ -7,7 +7,7 @@ def process_request(request, allowed_hooks):
     a request object resulting from a webhook request.
     """
     info = OrderedDict([
-        ('event_type', 'unknown webhook'),
+        ('trigger', 'unknown webhook'),
         ('author', None),
         ('message', None),
         ('display_url', None),
@@ -17,10 +17,10 @@ def process_request(request, allowed_hooks):
     ])
     try:
         rjson = request.get_json()
-        info['event_type'] =  request.headers.get('X-GitHub-Event')
-        if info['event_type'] not in allowed_hooks:
-            return False, '"%s" is not an allowed webhook.' % info['event_type']
-        if info['event_type'] == 'push':
+        info['trigger'] =  request.headers.get('X-GitHub-Event')
+        if info['trigger'] not in allowed_hooks:
+            return False, '"%s" is not an allowed webhook.' % info['trigger']
+        if info['trigger'] == 'push':
             info['author'] = rjson['pusher']['name']
             info['message'] = rjson['head_commit']['message']
             info['display_url'] = rjson['head_commit']['url']
@@ -28,7 +28,7 @@ def process_request(request, allowed_hooks):
             info['git_url'] = rjson['repository']['git_url']
             info['sha'] = rjson['repository']
             info['label'] = rjson['head_commit']['id']
-        elif info['event_type'] == 'pull_request':
+        elif info['trigger'] == 'pull_request':
             info['author'] = rjson['sender']['login']
             info['message'] = rjson['pull_request']['title']
             info['display_url'] = rjson['pull_request']['_links']['html']['href']

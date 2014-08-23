@@ -58,7 +58,7 @@ class Build(object):
         self.stamp = _now()# str(uuid.uuid4())
         self.delete_after = not self.setup.save_repo
         self.log_file = _build_log_path(self.stamp)
-        self.build_info = build_info
+        self.build_info = dict(build_info)
         self._message(json.dumps(build_info, indent=2))
         self._message(END_OF_BS)
         self._log('Starting build at %s' % _now())
