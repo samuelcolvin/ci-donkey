@@ -26,8 +26,8 @@ def process_request(request, allowed_hooks):
             info['display_url'] = rjson['head_commit']['url']
             info['private'] = rjson['repository']['private']
             info['git_url'] = rjson['repository']['git_url']
-            info['sha'] = rjson['repository']
-            info['label'] = rjson['head_commit']['id']
+            info['sha'] = rjson['head_commit']['id']
+            info['label'] = rjson['ref']
         elif info['trigger'] == 'pull_request':
             info['author'] = rjson['sender']['login']
             info['message'] = rjson['pull_request']['title']
