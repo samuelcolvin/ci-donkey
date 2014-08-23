@@ -4,7 +4,7 @@ USER_FILE = 'users.json'
 SETUP_FILE = 'setup.json'
 LOG_FILE = 'log.json'
 STATUS_SVG_FILE = 'status.svg'
-SITE_TITLE = 'Flask CI'
+SITE_TITLE = 'ci-donkey'
 # maximum number of log items in LOG_FILE before they are trimmed
 # None for no limit
 MAX_LOG_LENGTH = 50

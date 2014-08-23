@@ -64,13 +64,15 @@ class Build(object):
         self._log('Starting build at %s' % _now())
         self._log('log filename: %s' % self.log_file)
         save_dir = self.setup.save_dir if self.setup.save_dir else tempfile.gettempdir()
-        self.tmp_path = os.path.join(save_dir, self.stamp)
-        self._log('project directory: %s' % self.tmp_path)
+        self.repo_path = os.path.join(save_dir, self.stamp)
+        self._log('project directory: %s' % self.repo_path)
         self.pre_script = []
         self.main_script = []
 
     def set_url(self):
-        self.url = self.build_info.get('git_url', self.setup.git_url)
+        self.url = self.build_info.get('git_url', None)
+        if self.url is None:
+            self.url = self.setup.git_url
         private = self.build_info.get('private', True)
         t = self.setup.github_token
         if private and len(t) > 0:
@@ -110,16 +112,16 @@ class Build(object):
 
     def download(self):
         self._log('cloning...')
-        git.Git().clone(self.url, self.tmp_path)
+        git.Git().clone(self.url, self.repo_path)
         self._log('cloned code successfully')
         if 'sha' in self.build_info:
             print 'checkout out %s' % self.build_info['sha']
-            repo = git.Repo(self.tmp_path)
+            repo = git.Repo(self.repo_path)
             repo.git.checkout(self.build_info['sha'])
 
     def get_ci_script(self):
         ci_script_name = self.setup.ci_script
-        ci_script_path = os.path.join(self.tmp_path, ci_script_name)
+        ci_script_path = os.path.join(self.repo_path, ci_script_name)
         if not os.path.exists(ci_script_path):
             raise KnownError('Repo has no CI script file: %s' % ci_script_name)
         ci_script = open(ci_script_path, 'r').read()
@@ -157,7 +159,7 @@ class Build(object):
             cargs = shlex.split(command)
             try:
                 p = subprocess.Popen(cargs, 
-                    cwd = self.tmp_path, 
+                    cwd = self.repo_path, 
                     stdout = subprocess.PIPE,
                     stderr = subprocess.PIPE)
                 stdout, stderr = p.communicate()
@@ -185,9 +187,9 @@ class Build(object):
     def _finish(self):
         # make sure log file has finished being written
         self._log('Build finished at %s, cleaning up' % _now())
-        if self.delete_after and os.path.exists(self.tmp_path):
-            self._log('deleting repo dir...')
-            shutil.rmtree(self.tmp_path, ignore_errors = False)
+        if self.delete_after and os.path.exists(self.repo_path):
+            self._log('deleting repo dir %s' % self.repo_path)
+            shutil.rmtree(self.repo_path, ignore_errors = False)
         else:
             self._log('removing all untracked file from repo...')
             self.execute(['git clean -f -d -X'])

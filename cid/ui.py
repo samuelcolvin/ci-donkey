@@ -95,11 +95,15 @@ def progress(id = None):
 
 @app.route('/secret_build/<code>', methods=('POST',))
 def secret_build(code = None):
-    hook_info = github.process_request(request)
     cisetup = ci.setup_cls()
     time.sleep(0.5)
     if cisetup.secret_url != code:
         return 'Incorrect code', 403
+
+    approved, hook_info = github.process_request(request, cisetup.allowed_hooks)
+    if not approved:
+        return str(hook_info), 200
+        
     build_id = ci.build(hook_info)
     return 'building, build_id: %s' % build_id
 
@@ -121,10 +125,15 @@ class SetupForm(Form):
         'The token needs the "repo" scope to clone private repos. Leave blank for public repos.'
     github_token = fields.TextField(u'Github Token', description = token_descr)
 
+    allowed_hooks_descr = 'Comma seperated list of webooks to accept from github, '\
+        '<a href="https://developer.github.com/v3/repos/hooks/">see here for details</a>.'\
+        'Normally push and pull_request will suffice'
+    allowed_hooks = fields.TextField('Webhooks', description = allowed_hooks_descr,
+        validators=[validators.required()], default = 'push, pull_request')
+
     dft_secret_url = ''.join(random.choice(string.ascii_lowercase + \
         string.digits + string.ascii_uppercase) for i in range(60))
     secret_url_descr = 'This will make up the url which github pings. url: http://&lt;domain&gt;/secret_build/&lt;secret&gt;'
-    build_id = 'unknown'
     secret_url = fields.TextField('Secret URL Argument', description = secret_url_descr,
         validators=[validators.required()], default = dft_secret_url)
 
@@ -133,11 +142,11 @@ class SetupForm(Form):
         validators=[validators.required()], default = 'cidonkey.sh')
 
     pre_tag_descr = 'Tag signifying beginning of pre test script.'
-    pre_tag = fields.TextField('CI Script Name', description = pre_tag_descr,
+    pre_tag = fields.TextField('Pre Script Start', description = pre_tag_descr,
         validators=[validators.required()], default = '<PRE SCRIPT>')
 
     main_tag_descr = 'Tag signifying beginning of main test script.'
-    main_tag = fields.TextField(u'CI Script Name', description = main_tag_descr,
+    main_tag = fields.TextField('Main Script Start', description = main_tag_descr,
         validators=[validators.required()], default = '<MAIN SCRIPT>')
 
     save_repo_descr = 'If checked the cloned repo will be kept after CI is complete, otherwise it will be deleted perminently.'
@@ -165,7 +174,9 @@ class SetupForm(Form):
             if isinstance(attr, fields.Field):
                 if attr.name != 'csrf_token':
                     if attr.name == 'save_dir':
-                        d[attr.name] = None if attr.data == '' else attr.data
+                        d['save_dir'] = None if attr.data == '' else attr.data
+                    elif attr.name == 'allowed_hooks':
+                        d['allowed_hooks'] = [wh.strip() for wh in attr.data.split(',')]
                     else:
                         d[attr.name] = attr.data
         d['datetime'] = dtdt.utcnow().strftime(app.config['DATETIME_FORMAT'])
@@ -174,6 +185,7 @@ class SetupForm(Form):
     @staticmethod
     def from_json():
         obj = ci.setup_cls()
+        obj.allowed_hooks = ', '.join(obj.allowed_hooks)
         return SetupForm(obj = obj) if obj else SetupForm()
 
 
