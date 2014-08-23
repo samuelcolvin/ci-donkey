@@ -115,7 +115,7 @@ class Build(object):
         git.Git().clone(self.url, self.repo_path)
         self._log('cloned code successfully')
         if 'sha' in self.build_info:
-            print 'checkout out %s' % self.build_info['sha']
+            self._log('checkout out %s' % self.build_info['sha'])
             repo = git.Repo(self.repo_path)
             repo.git.checkout(self.build_info['sha'])
 
