@@ -1,5 +1,4 @@
 from datetime import datetime as dtdt
-from flask import url_for
 from . import app
 import subprocess
 import shlex
@@ -161,7 +160,7 @@ class Build(object):
         try:
             if self.setup.this_url == '':
                 raise Exception('this_url is null')
-            target_url = os.path.join(self.setup.this_url, url_for('show_build', id = self.stamp))
+            target_url = os.path.join(self.setup.this_url, 'show_build', self.stamp)
         except Exception, e:
             self._log('error getting target_url for status update: %r' % e)
             target_url = 'https://github.com/samuelcolvin/ci-donkey'
