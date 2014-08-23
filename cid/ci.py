@@ -3,7 +3,6 @@ from . import app
 import subprocess
 import shlex
 import git
-import uuid
 import os
 import json
 import re
@@ -12,6 +11,7 @@ import traceback
 import shutil
 import time
 import tempfile
+import requests
 
 def dt_from_str(dstr_in):
     # remove %s encoding of unix time stamp
@@ -55,6 +55,8 @@ END_OF_BS =        '==============================================\n'
 class Build(object):
     def __init__(self, build_info):
         self.setup = setup_cls()
+        self.token = self.setup.github_token
+        self.valid_token = isinstance(self.token, str) and len(self.token) > 0
         self.stamp = _now()# str(uuid.uuid4())
         self.delete_after = not self.setup.save_repo
         self.log_file = _build_log_path(self.stamp)
@@ -70,37 +72,10 @@ class Build(object):
         self.main_script = []
         self.badge_updates = False
 
-    def set_url(self):
-        self.url = self.build_info.get('git_url', None)
-        if self.url is None:
-            self.url = self.setup.git_url
-        private = self.build_info.get('private', True)
-        t = self.setup.github_token
-        if private and len(t) > 0:
-            self.url = re.sub('https://', 
-                'https://%s@' % t, self.url)
-            self._log('clone url: %s' % self.url.replace(t, '<token>'))
-        else:
-            self._log('clone url: %s' % self.url)
-
-    def decide_badge_updates(self):
-        """
-        decide whether we are on the default branch on the main repo,
-        if so the badge will get updated, otherwise not.
-        """
-        if self.url != self.setup.git_url:
-            self._log('git url is not the main repo, no badge updates')
-            return False
-        if 'default_branch' not in self.build_info:
-            self._log('master_branch not in build_info, no badge updates')
-            return False
-        if not self.build_info.get('label', '').endswith(self.build_info['default_branch']):
-            self._log('not on default_branch, no badge updates')
-            return False
-        self._log('detected default branch, badge will be updated')
-        return True
-
     def build(self):
+        """
+        run the build script.
+        """
         try:
             if not self.prebuild(): return
             if not self.main_build(): return
@@ -116,12 +91,13 @@ class Build(object):
             logs.append(log_info(self.stamp))
             self._save_logs(logs)
 
-            self.set_url()
-            self.badge_updates = self.decide_badge_updates()
+            self._set_url()
+            self.badge_updates = self._decide_badge_updates()
+            self._update_status('pending', 'CI build underway')
             self._set_svg('in_progress')
-            self.download()
-            self.get_ci_script()
-            self.execute(self.pre_script)
+            self._download()
+            self._get_ci_script()
+            self._execute(self.pre_script)
         except Exception, e:
             self._error(e)
             return False
@@ -129,7 +105,78 @@ class Build(object):
             self._message(LOG_PRE_FINISHED)
             return True
 
-    def download(self):
+    def main_build(self):
+        try:
+            self._execute(self.main_script)
+        except Exception, e:
+            self._error(e, True)
+            return False
+        else:
+            self._message(LOG_FINISHED)
+            return True
+
+    def _set_url(self):
+        """
+        generate the url which will be used to clone the repo.
+        """
+        self.url = self.build_info.get('git_url', None)
+        if self.url is None:
+            self.url = self.setup.git_url
+        private = self.build_info.get('private', True)
+        if private and self.valid_token:
+            if self.url.startswith('git://'):
+                self.url = self.url.replace('git://', 'https://')
+            self.url = re.sub('https://', 
+                'https://%s@' % self.token, self.url)
+            self._log('clone url: %s' % self.url.replace(self.token, '<token>'))
+        else:
+            self._log('clone url: %s' % self.url)
+
+    def _decide_badge_updates(self):
+        """
+        decide whether we are on the default branch on the main repo,
+        if so the badge will get updated, otherwise not.
+        """
+        route = lambda url: url[url.index('github.com'):]
+        if route(self.url) != route(self.setup.git_url):
+            self._log('git url is not the main repo, no badge updates')
+            return False
+        if 'default_branch' not in self.build_info:
+            self._log('master_branch not in build_info, no badge updates')
+            return False
+        if not self.build_info.get('label', '').endswith(self.build_info['default_branch']):
+            self._log('not on default_branch, no badge updates')
+            return False
+        self._log('detected default branch, badge will be updated')
+        return True
+
+    def _update_status(self, status, message):
+        assert status in ['pending', 'success', 'error', 'failure']
+        if self.build_info.get('trigger', None) != 'pull_request':
+            return
+        if not self.valid_token:
+            self._log('WARNING: no valid token found, cannot update status of pull request')
+            return
+        payload = {'state': status, 
+                   'description': message, 
+                   'context': 'ci-donkey', 
+                   'target_url': 'http://www.scolvin.com'
+        }
+        payload = json.dumps(payload)
+        headers = {'Authorization': 'token %s' % self.token}
+        url = self.setup.git_url
+        if url.endswith('.git'):
+            url = url[:-4]
+        else:
+            url = url.rstrip('/')
+        url += '/statuses/%s' % self.build_info['sha']
+        r = requests.post(url, data=payload, headers=headers)
+        self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
+        if r.status_code != 201:
+            self._log('recieved unexpected status code, response text:')
+            self._log(r.text)
+
+    def _download(self):
         self._log('cloning...')
         git.Git().clone(self.url, self.repo_path)
         self._log('cloned code successfully')
@@ -138,7 +185,7 @@ class Build(object):
             repo = git.Repo(self.repo_path)
             repo.git.checkout(self.build_info['sha'])
 
-    def get_ci_script(self):
+    def _get_ci_script(self):
         ci_script_name = self.setup.ci_script
         ci_script_path = os.path.join(self.repo_path, ci_script_name)
         if not os.path.exists(ci_script_path):
@@ -159,17 +206,7 @@ class Build(object):
         obj = (self.pre_script, self.main_script)
         json.dump(obj, open(build_script_path(self.stamp), 'w'), indent = 2)
 
-    def main_build(self):
-        try:
-            self.execute(self.main_script)
-        except Exception, e:
-            self._error(e, True)
-            return False
-        else:
-            self._message(LOG_FINISHED)
-            return True
-
-    def execute(self, commands):
+    def _execute(self, commands):
         for command in commands:
             if command.strip().startswith('#'):
                 self._log(command, 'SKIP> ')
@@ -211,13 +248,20 @@ class Build(object):
             shutil.rmtree(self.repo_path, ignore_errors = False)
         else:
             self._log('removing all untracked file from repo...')
-            self.execute(['git clean -f -d -X'])
+            self._execute(['git clean -f -d -X'])
         self._message(CLEANED_UP)
         time.sleep(2)
         logs = [log for log in history() if log['build_id'] != self.stamp]
         linfo = log_info(self.stamp, self.pre_script, self.main_script)
         logs.append(linfo)
         self._save_logs(logs)
+        if linfo['test_passed']:
+            self._update_status('success', 'CI Success whoooh')
+        else:
+            if linfo['term_error']:
+                self._update_status('error', 'Error running tests')
+            else:
+                self._update_status('failure', 'Tests failed')
         self._set_svg(linfo['test_passed'])
         if self.delete_after:
             os.remove(self.log_file)
