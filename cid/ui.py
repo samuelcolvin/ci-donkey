@@ -3,8 +3,9 @@ from flask import flash, jsonify, request, send_file
 from flask.ext.login import login_required, current_user
 from flask_wtf import Form
 from wtforms import fields, validators
-from . import app, ci, auth
+from . import app, ci, auth, github
 from datetime import datetime as dtdt
+from collections import OrderedDict
 import string
 import random
 import json
@@ -12,7 +13,6 @@ import os
 import traceback
 import time
 import pytz
-import cgi
 
 def api_error(e):
     traceback.print_exc()
@@ -40,9 +40,9 @@ def index():
             'Date': date_link(log),
             'Trigger': log.get('trigger', ''),
             'Author': log.get('author', ''),
-            'Complete': html_bool(log['finished']),
-            'Test Successful': html_bool(not log['term_error']),
-            'Test Passed': html_bool(log['test_passed'])
+            'Complete': log['finished'],
+            'Test Successful': not log['term_error'],
+            'Test Passed': log['test_passed']
             })
     theadings = ('Date', 'Trigger', 'Author', 'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', records = records, theadings = theadings)
@@ -52,14 +52,14 @@ def date_link(log):
     dstr = dt.astimezone(pytz.timezone('Europe/London')).strftime(app.config['DISPLAY_DT'])
     return '<a href="%s">%s</a>' % (url_for('show_build', id = log['build_id']), dstr)
 
-def html_bool(b):
-    glyph = 'ok' if b else 'remove'
-    return '<span class="glyphicon glyphicon-%s"></span>' % glyph
-
 @app.route('/build')
 @login_required
 def build():
-    build_id = ci.build('manual')
+    build_info = OrderedDict([
+        ('trigger', 'manual'),
+        ('author', current_user.email)
+    ])
+    build_id = ci.build(build_info)
     return render_template('build.jinja', pogress_url = url_for('progress', id = build_id))
 
 @app.route('/show_build/<id>')
@@ -70,8 +70,10 @@ def show_build(id = None):
     if not log['finished']:
         return render_template('build.jinja', pogress_url = url_for('progress', id = id))
     else:
-        build_status =  '<p>Test Status: %s</p>\n' % html_bool(not log['term_error'])
-        build_status += '<p>Test Passed: %s</p>' % html_bool(log['test_passed'])
+        build_status = {
+            'success': not log['term_error'],
+            'passed': log['test_passed']
+        }
         return render_template('build.jinja', 
             build_status = build_status,
             pre_build_log = log['prelog'],
@@ -93,29 +95,12 @@ def progress(id = None):
 
 @app.route('/secret_build/<code>', methods=('POST',))
 def secret_build(code = None):
-    event_type = 'unknown webhook'
-    author = None
-    message = None
-    url = None
-    try:
-        # we're not actually using these atm, but we might in future
-        info = request.get_json()
-        event_type =  request.headers.get('X-GitHub-Event')
-        if event_type == 'push':
-            author = info['pusher']['name']
-            message = info['head_commit']['message']
-            url = info['head_commit']['url']
-        elif event_type == 'pull_request':
-            author = info['sender']['login']
-            message = info['pull_request']['title']
-            url = info['pull_request']['_links']['html']['href']
-    except Exception, e:
-        print 'Exception getting hook details: %r' % e
-    setup = ci.setup_cls()
+    hook_info = github.process_request(request)
+    cisetup = ci.setup_cls()
     time.sleep(0.5)
-    if setup.secret_url != code:
+    if cisetup.secret_url != code:
         return 'Incorrect code', 403
-    build_id = ci.build(trigger = event_type, message = message, url = url, author = author)
+    build_id = ci.build(hook_info)
     return 'building, build_id: %s' % build_id
 
 @app.route('/status.svg')
@@ -126,10 +111,10 @@ def status_svg():
     return send_file(svg_path, mimetype = 'image/svg+xml', cache_timeout=0)
 
 class SetupForm(Form):
-    name = fields.TextField(u'CI Project Name', validators=[validators.required()])
+    name = fields.TextField('CI Project Name', validators=[validators.required()])
 
     url_descr = 'This should be the https url for github.'
-    git_url = fields.TextField(u'Git URL', validators=[validators.required()], description = url_descr)
+    git_url = fields.TextField('Git URL', validators=[validators.required()], description = url_descr)
 
     token_descr = 'See <a href="https://help.github.com/articles/creating-an'\
         '-access-token-for-command-line-use">here</a> for details on how create a token. '\
@@ -140,20 +125,38 @@ class SetupForm(Form):
         string.digits + string.ascii_uppercase) for i in range(60))
     secret_url_descr = 'This will make up the url which github pings. url: http://&lt;domain&gt;/secret_build/&lt;secret&gt;'
     build_id = 'unknown'
-    secret_url = fields.TextField(u'Secret URL Argument', description = secret_url_descr,
+    secret_url = fields.TextField('Secret URL Argument', description = secret_url_descr,
         validators=[validators.required()], default = dft_secret_url)
 
     ci_script_descr = 'This is the file which is split then ran to test the project.'
-    ci_script = fields.TextField(u'CI Script Name', description = ci_script_descr,
+    ci_script = fields.TextField('CI Script Name', description = ci_script_descr,
         validators=[validators.required()], default = 'cidonkey.sh')
 
     pre_tag_descr = 'Tag signifying beginning of pre test script.'
-    pre_tag = fields.TextField(u'CI Script Name', description = pre_tag_descr,
+    pre_tag = fields.TextField('CI Script Name', description = pre_tag_descr,
         validators=[validators.required()], default = '<PRE SCRIPT>')
 
     main_tag_descr = 'Tag signifying beginning of main test script.'
     main_tag = fields.TextField(u'CI Script Name', description = main_tag_descr,
         validators=[validators.required()], default = '<MAIN SCRIPT>')
+
+    save_repo_descr = 'If checked the cloned repo will be kept after CI is complete, otherwise it will be deleted perminently.'
+    save_repo = fields.BooleanField('Save Repo', description=save_repo_descr, default=False)
+
+    save_dir_descr = """Directory to save copies of the repo in (only used if "Save Repo" is checked).
+         Should have write permissions ci-donkey user."""
+    save_dir = fields.TextField('Save Directory', description=save_dir_descr)
+
+    def validate_save_dir(self, field):
+        path = field.data
+        if path == '':
+            return
+        if not os.path.exists(path):
+            raise validators.ValidationError('Path must exist.')
+        if not os.path.isdir(path):
+            raise validators.ValidationError('Path must be a directory not a file.')
+        if not os.access(path, os.W_OK):
+            raise validators.ValidationError('This user does not have write permissions.')
 
     def dump_json(self):
         d = {}
@@ -161,7 +164,10 @@ class SetupForm(Form):
             attr = getattr(self, atname)
             if isinstance(attr, fields.Field):
                 if attr.name != 'csrf_token':
-                    d[attr.name] = attr.data
+                    if attr.name == 'save_dir':
+                        d[attr.name] = None if attr.data == '' else attr.data
+                    else:
+                        d[attr.name] = attr.data
         d['datetime'] = dtdt.utcnow().strftime(app.config['DATETIME_FORMAT'])
         json.dump(d, open(app.config['SETUP_FILE'], 'w'), indent = 2)
 

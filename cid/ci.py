@@ -13,8 +13,14 @@ import shutil
 import time
 import tempfile
 
-def dt_from_str(dstr):
-    return dtdt.strptime(dstr, app.config['DATETIME_FORMAT'])
+def dt_from_str(dstr_in):
+    # remove %s encoding of unix time stamp
+    dstr = re.sub('\d\d\d\d\d\d*', '', dstr_in)
+    fmat = app.config['DATETIME_FORMAT'].replace('%s', '')
+    try:
+        return dtdt.strptime(dstr, fmat)
+    except ValueError:
+        return dtdt(1970,1,1)
 
 def setup_cls():
     if os.path.exists(app.config['SETUP_FILE']):
@@ -22,10 +28,10 @@ def setup_cls():
         obj['datetime'] = dt_from_str(obj['datetime'])
         return type('CISetup', (), obj)
 
-def build(trigger=None, message=None, url=None, author=None):
-    b = Build(trigger=trigger, message=message, url=url, author=author)
+def build(build_info):
+    b = Build(build_info)
     thread.start_new_thread(b.build, ())
-    return b.uuid
+    return b.stamp
 
 def _now():
     return dtdt.utcnow().strftime(app.config['DATETIME_FORMAT'])
@@ -43,25 +49,22 @@ TERMINAL_ERROR =   '#############   TERMINAL ERROR   #############\n'
 TEST_ERROR =       '#############     TEST ERROR     #############\n'
 LOG_PRE_FINISHED = '############# PRE BUILD FINISHED #############\n'
 LOG_FINISHED =     '#############      FINISHED      #############\n'
-
+CLEANED_UP =       '#############     CLEANED UP     #############\n'
+END_OF_BS =        '==============================================\n'
 
 class Build(object):
-    def __init__(self, trigger, message, url, author, delete_after = True):
+    def __init__(self, build_info):
         self.setup = setup_cls()
-        self.uuid = str(uuid.uuid4())
-        self.delete_after = delete_after
-        self.log_file = _build_log_path(self.uuid)
+        self.stamp = _now()# str(uuid.uuid4())
+        self.delete_after = not self.setup.save_repo
+        self.log_file = _build_log_path(self.stamp)
+        self.build_info = build_info
+        self._message(json.dumps(build_info, indent=2))
+        self._message(END_OF_BS)
         self._log('Starting build at %s' % _now())
-        if trigger:
-            self._log('Build trigger %s' % trigger)
-        if message:
-            self._log('Build message "%s"' % message)
-        if url:
-            self._log('Build url %s' % url)
-        if url:
-            self._log('Author %s' % author)
         self._log('log filename: %s' % self.log_file)
-        self.tmp_path = os.path.join(tempfile.gettempdir(), self.uuid)
+        save_dir = self.setup.save_dir if self.setup.save_dir else tempfile.gettempdir()
+        self.tmp_path = os.path.join(save_dir, self.stamp)
         self._log('project directory: %s' % self.tmp_path)
         self.pre_script = []
         self.main_script = []
@@ -74,16 +77,12 @@ class Build(object):
                 pre_script, main_script = json.load(open(script_path, 'r'))
         with open(_build_log_path(build_id), 'r') as logfile:
             log = logfile.read()
-            def getvalue(search):
-                m = re.search(search, log)
-                try: return m.groups()[0]
-                except: pass
-
-            datetime = getvalue('Starting build at (.*)')
-            trigger = getvalue('Build trigger (.*)')
-            message = getvalue('Build message "(.*?)"')
-            url = getvalue('Build url (.*)')
-            author = getvalue('Author (.*)')
+            status = {'build_id': build_id}
+            status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
+            try:
+                status.update(json.loads(log[:log.index(END_OF_BS)]))
+            except Exception:
+                print 'error processing json build info from log %s' % build_id
             prelog = log
             mainlog = None
             prefin = LOG_PRE_FINISHED in log
@@ -91,12 +90,14 @@ class Build(object):
                 prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
                 prelog += LOG_PRE_FINISHED
             term_error = TERMINAL_ERROR in log
-            finished = LOG_FINISHED in log or term_error
-            test_passed = TEST_ERROR not in log and finished and not term_error
-            local = locals()
-            status = {name: local[name] for name in 
-            ['build_id', 'datetime', 'trigger', 'message', 'url', 'author', 'prelog', 'mainlog', 
-            'prefin', 'term_error', 'finished', 'test_passed', 'pre_script', 'main_script']}
+            finished = CLEANED_UP in log or term_error
+            status['test_passed'] = TEST_ERROR not in log and finished and not term_error
+            status['prelog'] = prelog
+            status['mainlog'] = mainlog
+            status['term_error'] = term_error
+            status['finished'] = finished
+            status['pre_script'] = pre_script
+            status['main_script'] = main_script
             return status
 
     @staticmethod
@@ -107,9 +108,10 @@ class Build(object):
         return logs
 
     def set_url(self):
-        self.url = self.setup.git_url
+        self.url = self.build_info.get('git_url', self.setup.git_url)
+        private = self.build_info.get('private', True)
         t = self.setup.github_token
-        if len(t) > 0:
+        if private and len(t) > 0:
             self.url = re.sub('https://', 
                 'https://%s@' % t, self.url)
             self._log('clone url: %s' % self.url.replace(t, '<token>'))
@@ -129,7 +131,7 @@ class Build(object):
         try:
             # first we save a blank log item so it's in history
             logs = Build.history()
-            logs.append(Build.log_info(self.uuid))
+            logs.append(Build.log_info(self.stamp))
             self._save_logs(logs)
 
             self.set_url()
@@ -148,6 +150,10 @@ class Build(object):
         self._log('cloning...')
         git.Git().clone(self.url, self.tmp_path)
         self._log('cloned code successfully')
+        if 'sha' in self.build_info:
+            print 'checkout out %s' % self.build_info['sha']
+            repo = git.Repo(self.tmp_path)
+            repo.git.checkout(self.build_info['sha'])
 
     def get_ci_script(self):
         ci_script_name = self.setup.ci_script
@@ -168,7 +174,7 @@ class Build(object):
                 continue
             current_script.append(line)
         obj = (self.pre_script, self.main_script)
-        json.dump(obj, open(Build._build_script_path(self.uuid), 'w'), indent = 2)
+        json.dump(obj, open(Build._build_script_path(self.stamp), 'w'), indent = 2)
 
     @staticmethod
     def _build_script_path(id):
@@ -220,18 +226,23 @@ class Build(object):
 
     def _finish(self):
         # make sure log file has finished being written
-        self._log('Build finished at %s, cleaning up...' % _now())
-        time.sleep(2)
+        self._log('Build finished at %s, cleaning up' % _now())
         if self.delete_after and os.path.exists(self.tmp_path):
+            self._log('deleting repo dir...')
             shutil.rmtree(self.tmp_path, ignore_errors = False)
-        logs = [log for log in Build.history() if log['build_id'] != self.uuid]
-        log_info = Build.log_info(self.uuid, self.pre_script, self.main_script)
+        else:
+            self._log('removing all untracked file from repo...')
+            self.execute(['git clean -f -d -X'])
+        self._message(CLEANED_UP)
+        time.sleep(2)
+        logs = [log for log in Build.history() if log['build_id'] != self.stamp]
+        log_info = Build.log_info(self.stamp, self.pre_script, self.main_script)
         logs.append(log_info)
         self._set_svg(log_info['test_passed'])
         self._save_logs(logs)
         if self.delete_after:
             os.remove(self.log_file)
-            os.remove(Build._build_script_path(self.uuid))
+            os.remove(Build._build_script_path(self.stamp))
 
     def _set_svg(self, status):
         if status == 'in_progress':
@@ -247,11 +258,11 @@ class Build(object):
 
     def _message(self, message):
         with open(self.log_file, 'a') as logfile:
-            logfile.write(message)
+            if message.endswith('\n'):
+                logfile.write(message)
+            else:
+                logfile.write(message + '\n')
             logfile.flush()
 
     def _log(self, line, prefix = '#> '):
-        # print line
-        with open(self.log_file, 'a') as logfile:
-            logfile.write(prefix + line.strip('\n \t') + '\n')
-            logfile.flush()
+        self._message(prefix + line.strip('\n \t'))

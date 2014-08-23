@@ -7,7 +7,11 @@
         {% for f in form if f.type != 'CSRFTokenField' %}
             <div class="form-group{% if f.errors %} has-error has-feedback{% endif %}">
                 {{ f.label(class_="control-label") }}
-                {{ f(class_="form-control") }}
+                {% if f.type == 'BooleanField' %}
+                  <div>{{ f }}</div>
+                {% else %}
+                  {{ f(class_="form-control") }}
+                {% endif %}
                 {% if f.errors %}
                   <span class="glyphicon glyphicon-remove form-control-feedback"></span>
                 {% endif %}

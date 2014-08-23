@@ -151,7 +151,7 @@ def first_user():
         print 'Invalid email address entered'
         first_user()
     password = getpass.getpass()
-    u = User(email, password, True)
+    u = User(email, password, active=True, admin=True)
     u.save()
     print 'user %s successfully created' % email
 

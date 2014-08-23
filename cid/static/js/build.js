@@ -28,15 +28,15 @@ function update(){
   .fail(function(data) {
 	  console.log(data);
 	  clearInterval(clear_check);
-    finished('Error Occurred, stopping progress updates: ' + data.responseText);
+    finished('Error Occurred, stopping progress updates: <pre>' + data.responseText + '</pre>');
   });
 }
 
 function finished(message){
 	clearInterval(clear_check);
-	$('#build-message').text(message);
+	$('#build-message').html(message);
 }
 
 if (pogress_url != ''){
-	var clear_check = setInterval(update, 500);
+	var clear_check = setInterval(update, 2000);
 }

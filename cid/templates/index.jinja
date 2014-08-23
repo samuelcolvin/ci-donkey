@@ -1,5 +1,13 @@
 {% extends 'base.jinja' %}
 
+{% macro display(v) %}
+  {% if v|string in ['True', 'False'] %}
+    <span class="glyphicon glyphicon-{{ 'ok' if v else 'remove' }}"></span>
+  {% else %}
+    {{ v|safe }}
+  {% endif %}
+{% endmacro %}
+
 {% block content %}
 <div class="content">
   <h4>Build History</h4>
@@ -17,7 +25,7 @@
     {% for record in records %}
       <tr>
       {% for head in theadings %}
-        <td>{{ record[head]|safe }}</td>
+        <td>{{ display(record[head]) }}</td>
       {% endfor %}
       </tr>
     {% endfor %}
