@@ -165,18 +165,20 @@ class Build(object):
         payload = json.dumps(payload)
         headers = {'Authorization': 'token %s' % self.token}
         url = self.setup.git_url
-        if url.startswith('git://'):
-            url = self.url.replace('git://', 'https://')
-        if url.endswith('.git'):
-            url = url[:-4]
+        gh = 'github.com'
+        uri = url[url.index(gh)+len(gh):]
+        if uri.endswith('.git'):
+            uri = uri[:-4]
         else:
-            url = url.rstrip('/')
-        url += '/statuses/%s' % self.build_info['sha']
+            uri = uri.rstrip('/')
+
+        url = 'https://api.github.com/repos' + uri + '/statuses/%s' % self.build_info['sha']
         r = requests.post(url, data=payload, headers=headers)
         self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
         if r.status_code != 201:
             self._log('recieved unexpected status code, response text:')
-            self._log(r.text)
+            self._log('url posted to: %s' % url)
+            self._log(r.text[:1000])
 
     def _download(self):
         self._log('cloning...')
