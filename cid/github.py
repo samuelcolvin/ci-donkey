@@ -20,7 +20,6 @@ def process_request(request, allowed_hooks):
             info['message'] = rjson['head_commit']['message']
             info['display_url'] = rjson['head_commit']['url']
             info['private'] = rjson['repository']['private']
-            info['git_url'] = rjson['repository']['git_url']
             info['default_branch'] = rjson['repository']['default_branch']
             info['sha'] = rjson['head_commit']['id']
             info['label'] = rjson['ref']
@@ -29,9 +28,11 @@ def process_request(request, allowed_hooks):
             info['message'] = rjson['pull_request']['title']
             info['display_url'] = rjson['pull_request']['_links']['html']['href']
             info['private'] = rjson['pull_request']['head']['repo']['private']
-            info['git_url'] = rjson['pull_request']['head']['repo']['git_url']
             info['sha'] = rjson['pull_request']['head']['sha']
             info['label'] = rjson['pull_request']['head']['label']
+            info['status_url'] = rjson['pull_request']['statuses_url']
+            info['fetch'] = 'pull/%(number)d/head:pr_%(number)d' % rjson
+            info['fetch_branch'] = 'pr_%(number)d' % rjson
     except Exception, e:
         print 'Exception getting hook details: %r' % e
         try:

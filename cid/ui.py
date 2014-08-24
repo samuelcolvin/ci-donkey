@@ -31,8 +31,6 @@ def main_menu():
         setupci = ci.setup_cls()
         url = setupci.git_url if setupci else None
         if url not in ['', None]:
-            if url.startswith('git://'):
-                url = url.replace('git://', 'https://')
             pages += [(url, 'Github')]
     return [{'page': page, 'name': name, 'active': ep == page} for page, name in pages]
 
@@ -168,6 +166,10 @@ class SetupForm(Form):
     save_dir_descr = 'Directory to save copies of the repo in (only used if "Save Repo" is checked).'\
          'hould have write permissions ci-donkey user.'
     save_dir = fields.TextField('Save Directory', description=save_dir_descr)
+
+    def validate_git_url(self, field):
+        if not field.data.startswith('http://'):
+            raise validators.ValidationError('git URL must start https://')
 
     def validate_save_dir(self, field):
         path = field.data

@@ -89,6 +89,9 @@ class Build(object):
             self._finish()
 
     def prebuild(self):
+        """
+        run before actual build to setup environment.
+        """
         try:
             # first we save a blank log item so it's in history
             logs = history()
@@ -110,6 +113,9 @@ class Build(object):
             return True
 
     def main_build(self):
+        """
+        run the build script
+        """
         try:
             self._execute(self.main_script)
         except Exception, e:
@@ -123,18 +129,11 @@ class Build(object):
         """
         generate the url which will be used to clone the repo.
         """
-        self.url = self.build_info.get('git_url', None)
-        if self.url is None:
-            self.url = self.setup.git_url
+        self.url = self.setup.git_url
         private = self.build_info.get('private', True)
         if private and self.valid_token:
-            if self.url.startswith('git://'):
-                self.url = self.url.replace('git://', 'https://')
-            self.url = re.sub('https://', 
-                'https://%s@' % self.token, self.url)
-            self._log('clone url: %s' % self.url.replace(self.token, '<token>'))
-        else:
-            self._log('clone url: %s' % self.url)
+            self.url = re.sub('https://', 'https://%s@' % self.token, self.url)
+        self._log('clone url: %s' % self.url)
 
     def _decide_badge_updates(self):
         """
@@ -144,9 +143,8 @@ class Build(object):
         if self.build_info['trigger'] == 'manual':
             self._log('manual build, badge will be updated')
             return True
-        route = lambda url: url[url.index('github.com'):]
-        if route(self.url) != route(self.setup.git_url):
-            self._log('git url is not the main repo, no badge updates')
+        elif self.build_info['pull_request'] == 'manual':
+            self._log('pull_request, no badge updates')
             return False
         if 'default_branch' not in self.build_info:
             self._log('master_branch not in build_info, no badge updates')
@@ -159,7 +157,7 @@ class Build(object):
 
     def _update_status(self, status, message):
         assert status in ['pending', 'success', 'error', 'failure']
-        if self.build_info.get('trigger', None) != 'pull_request':
+        if not 'status_url' in self.build_info:
             return
         if not self.valid_token:
             self._log('WARNING: no valid token found, cannot update status of pull request')
@@ -178,15 +176,7 @@ class Build(object):
         }
         payload = json.dumps(payload)
         headers = {'Authorization': 'token %s' % self.token}
-        url = self.setup.git_url
-        gh = 'github.com'
-        uri = url[url.index(gh)+len(gh):]
-        if uri.endswith('.git'):
-            uri = uri[:-4]
-        else:
-            uri = uri.rstrip('/')
-
-        url = 'https://api.github.com/repos' + uri + '/statuses/%s' % self.build_info['sha']
+        url = self.build_info['status_url']
         r = requests.post(url, data=payload, headers=headers)
         self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
         if r.status_code != 201:
@@ -198,10 +188,18 @@ class Build(object):
         self._log('cloning...')
         git.Git().clone(self.url, self.repo_path)
         self._log('cloned code successfully')
+        if 'fetch' in self.build_info:
+            self._log('fetching branch %(fetch)s' % self.build_info)
+            commands = ['git fetch origin %(fetch)s' % self.build_info]
+            if 'fetch_branch' in self.build_info:
+                commands.append('git checkout %(fetch_branch)s' % self.build_info)
+            self._execute(commands)
         if 'sha' in self.build_info:
-            self._log('checkout out %s' % self.build_info['sha'])
-            repo = git.Repo(self.repo_path)
-            repo.git.checkout(self.build_info['sha'])
+            self._log('checkout out %(sha)s' % self.build_info)
+            commands = ['git checkout %(sha)s' % self.build_info]
+            self._execute(commands)
+            # repo = git.Repo(self.repo_path)
+            # repo.git.checkout(self.build_info['sha'])
 
     def _get_ci_script(self):
         ci_script_name = self.setup.ci_script
@@ -262,28 +260,33 @@ class Build(object):
         self._message(TERMINAL_ERROR)
 
     def _finish(self):
-        # make sure log file has finished being written
         self._log('Build finished at %s, cleaning up' % _now())
+
+        linfo = log_info(self.stamp, self.pre_script, self.main_script)
+        if linfo['test_passed']:
+            self._update_status('success', 'CI Success')
+        elif linfo['term_error']:
+            self._update_status('error', 'Error running tests')
+        else:
+            self._update_status('failure', 'Tests failed')
+        self._set_svg(linfo['test_passed'])
+
         if self.delete_after and os.path.exists(self.repo_path):
             self._log('deleting repo dir %s' % self.repo_path)
             shutil.rmtree(self.repo_path, ignore_errors = False)
         else:
             self._log('removing all untracked file from repo...')
             self._execute(['git clean -f -d -X'], mute_stdout=True)
+
         self._message(CLEANED_UP)
+
+        # make sure log file has finished being written
         time.sleep(2)
         logs = [log for log in history() if log['build_id'] != self.stamp]
         linfo = log_info(self.stamp, self.pre_script, self.main_script)
         logs.append(linfo)
         self._save_logs(logs)
-        if linfo['test_passed']:
-            self._update_status('success', 'CI Success')
-        else:
-            if linfo['term_error']:
-                self._update_status('error', 'Error running tests')
-            else:
-                self._update_status('failure', 'Tests failed')
-        self._set_svg(linfo['test_passed'])
+
         if self.delete_after:
             os.remove(self.log_file)
             os.remove(build_script_path(self.stamp))
@@ -302,6 +305,7 @@ class Build(object):
             filename = 'in_progress.svg'
         else:
             filename = 'passing.svg' if status else 'failing.svg'
+        self._log('setting status svg to %s' % filename)
         thisdir = os.path.dirname(__file__)
         src = os.path.join(thisdir, 'static', filename)
         shutil.copyfile(src, app.config['STATUS_SVG_FILE'])
@@ -325,6 +329,9 @@ def log_info(build_id, pre_script = None, main_script = None):
             pre_script, main_script = json.load(open(script_path, 'r'))
     with open(_build_log_path(build_id), 'r') as logfile:
         log = logfile.read()
+        t = setup_cls().github_token
+        if isinstance(t, basestring) and len(t) > 0:
+            log = log.replace(t, '<token>')
         status = {'build_id': build_id}
         status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
         try:
