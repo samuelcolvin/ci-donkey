@@ -28,8 +28,9 @@ def main_menu():
             pages = [(url_for('build'), 'Build Now'), (url_for('setup'), 'Setup')]#, ('about', 'About')
         else:
             pages = [(url_for('build'), 'Build Now')]#, ('about', 'About')
-        url = ci.setup_cls().git_url
-        if url != '':
+        setupci = ci.setup_cls()
+        url = setupci.git_url if setupci else None
+        if url not in ['', None]:
             if url.startswith('git://'):
                 url = url.replace('git://', 'https://')
             pages += [(url, 'Github')]
@@ -53,8 +54,7 @@ def index():
     theadings = ('Date', 'Trigger', 'Author', 'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', 
                             records = records, 
-                            theadings = theadings, 
-                            project_url = ci.setup_cls().git_url)
+                            theadings = theadings)
 
 def date_link(log):
     dt = ci.dt_from_str(log['datetime']).replace(tzinfo = pytz.utc)
