@@ -23,12 +23,17 @@ def process_request(request, allowed_hooks):
             info['default_branch'] = rjson['repository']['default_branch']
             info['sha'] = rjson['head_commit']['id']
             info['label'] = rjson['ref']
+            info['status_url'] = rjson['repository']['statuses_url']\
+                    .replace('{sha}',info['sha'])
         elif info['trigger'] == 'pull_request':
             info['author'] = rjson['sender']['login']
             info['message'] = rjson['pull_request']['title']
             info['display_url'] = rjson['pull_request']['_links']['html']['href']
             info['private'] = rjson['pull_request']['head']['repo']['private']
             info['sha'] = rjson['pull_request']['head']['sha']
+            info['action'] = rjson['action']
+            if info['action'] == 'closed':
+                return False, 'not running ci when pull request is closed'
             info['label'] = rjson['pull_request']['head']['label']
             info['status_url'] = rjson['pull_request']['statuses_url']
             info['fetch'] = 'pull/%(number)d/head:pr_%(number)d' % rjson
@@ -45,3 +50,4 @@ def process_request(request, allowed_hooks):
             pass
         return e
     return True, info
+
