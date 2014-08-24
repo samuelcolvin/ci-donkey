@@ -141,6 +141,9 @@ class Build(object):
         decide whether we are on the default branch on the main repo,
         if so the badge will get updated, otherwise not.
         """
+        if self.build_info['trigger'] == 'manual':
+            self._log('manual build, badge will be updated')
+            return True
         route = lambda url: url[url.index('github.com'):]
         if route(self.url) != route(self.setup.git_url):
             self._log('git url is not the main repo, no badge updates')
