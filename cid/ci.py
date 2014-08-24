@@ -60,7 +60,7 @@ class Build(object):
         self.token = self.setup.github_token
         self.valid_token = isinstance(self.token, basestring) and len(self.token) > 0
         short_random = ''.join(random.choice(string.ascii_lowercase + string.digits)
-            for i in range(10))
+            for i in range(5))
         self.stamp = _now() + '_' + short_random
         self.delete_after = not self.setup.save_repo
         self.log_file = _build_log_path(self.stamp)
@@ -224,7 +224,7 @@ class Build(object):
         obj = (self.pre_script, self.main_script)
         json.dump(obj, open(build_script_path(self.stamp), 'w'), indent = 2)
 
-    def _execute(self, commands):
+    def _execute(self, commands, mute_stderr=False, mute_stdout=False):
         for command in commands:
             if command.strip().startswith('#'):
                 self._log(command, 'SKIP> ')
@@ -232,12 +232,15 @@ class Build(object):
             self._log(command, 'EXEC> ')
             cargs = shlex.split(command)
             try:
-                p = subprocess.Popen(cargs, 
-                    cwd = self.repo_path, 
-                    stdout = subprocess.PIPE,
-                    stderr = subprocess.PIPE)
+                p = subprocess.Popen(cargs,
+                    cwd=self.repo_path, 
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
                 stdout, stderr = p.communicate()
-                self._log(stdout, '')
+                if not mute_stdout:
+                    self._log(stdout, '')
+                if not mute_stderr and len(stderr) > 0:
+                    self._log(stderr, '')
                 if p.returncode != 0:
                     raise CommandError(stderr)
             except CommandError, e:
@@ -266,7 +269,7 @@ class Build(object):
             shutil.rmtree(self.repo_path, ignore_errors = False)
         else:
             self._log('removing all untracked file from repo...')
-            self._execute(['git clean -f -d -X'])
+            self._execute(['git clean -f -d -X'], mute_stdout=True)
         self._message(CLEANED_UP)
         time.sleep(2)
         logs = [log for log in history() if log['build_id'] != self.stamp]
