@@ -12,6 +12,8 @@ import shutil
 import time
 import tempfile
 import requests
+import string
+import random
 
 def dt_from_str(dstr_in):
     # remove %s encoding of unix time stamp
@@ -57,7 +59,9 @@ class Build(object):
         self.setup = setup_cls()
         self.token = self.setup.github_token
         self.valid_token = isinstance(self.token, basestring) and len(self.token) > 0
-        self.stamp = _now()# str(uuid.uuid4())
+        short_random = ''.join(random.choice(string.ascii_lowercase + string.digits)
+            for i in range(10))
+        self.stamp = _now() + '_' + short_random
         self.delete_after = not self.setup.save_repo
         self.log_file = _build_log_path(self.stamp)
         self.build_info = dict(build_info)
