@@ -143,7 +143,7 @@ class Build(object):
         if self.build_info['trigger'] == 'manual':
             self._log('manual build, badge will be updated')
             return True
-        elif self.build_info['pull_request'] == 'manual':
+        elif self.build_info['trigger'] == 'pull_request':
             self._log('pull_request, no badge updates')
             return False
         if 'default_branch' not in self.build_info:
@@ -331,7 +331,7 @@ def log_info(build_id, pre_script = None, main_script = None):
         log = logfile.read()
         t = setup_cls().github_token
         if isinstance(t, basestring) and len(t) > 0:
-            log = log.replace(t, '<token>')
+            log = re.sub(t, '<token>', log)
         status = {'build_id': build_id}
         status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
         try:
@@ -367,3 +367,5 @@ def history():
 
 def build_script_path(id):
     return os.path.join('/tmp', id + '.script')
+
+
