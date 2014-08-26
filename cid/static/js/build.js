@@ -18,11 +18,11 @@ function update(){
 	  }
 
 	  if (data.processing_complete){
-	  	finished('Build Finished');
+	  	finished('Build Finished', data.build_id);
 	  }
 
 	  if (data.term_error){
-	  	finished('Build Error');
+	  	finished('Build Error', data.build_id);
 	  }
 	})
   .fail(function(data) {
@@ -32,9 +32,12 @@ function update(){
   });
 }
 
-function finished(message){
-	clearInterval(clear_check);
-	$('#build-message').html(message);
+function finished(message, build_id){
+  clearInterval(clear_check);
+  $('#build-message').html(message);
+  if (build_id !== null){
+    document.location.href = '/show_build/' + build_id;
+  }
 }
 
 if (pogress_url != ''){

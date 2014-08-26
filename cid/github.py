@@ -1,7 +1,9 @@
-import uuid
 from collections import OrderedDict
+import uuid
+import requests
+import json
 
-def process_request(request, allowed_hooks):
+def process_request(request, cisetup):
     """
     extracts the required data about the event from
     a request object resulting from a webhook request.
@@ -13,7 +15,7 @@ def process_request(request, allowed_hooks):
     try:
         rjson = request.get_json()
         info['trigger'] =  request.headers.get('X-GitHub-Event')
-        if info['trigger'] not in allowed_hooks:
+        if info['trigger'] not in cisetup.allowed_hooks:
             return False, '"%s" is not an allowed webhook.' % info['trigger']
         if info['trigger'] == 'push':
             info['author'] = rjson['pusher']['name']
@@ -38,6 +40,9 @@ def process_request(request, allowed_hooks):
             info['status_url'] = rjson['pull_request']['statuses_url']
             info['fetch'] = 'pull/%(number)d/head:pr_%(number)d' % rjson
             info['fetch_branch'] = 'pr_%(number)d' % rjson
+        statues, _ = api(info['status_url'], cisetup.github_token)
+        if len(statues) > 0:
+            return False, 'not running ci, status already exists for this commit'
     except Exception, e:
         print 'Exception getting hook details: %r' % e
         try:
@@ -50,4 +55,15 @@ def process_request(request, allowed_hooks):
             pass
         return e
     return True, info
+
+def api(url, token, method=requests.get, data=None):
+    headers = {'Authorization': 'token %s' % token}
+    payload = None
+    if data:
+        payload = json.dumps(data)
+    r = method(url, data=payload, headers=headers)
+    try:
+        return json.loads(r.text), r
+    except ValueError:
+        return None, r
 

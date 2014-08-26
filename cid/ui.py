@@ -44,12 +44,13 @@ def index():
         records.append({
             'Date': date_link(log),
             'Trigger': log.get('trigger', ''),
+            'Master': 'master' in log and log['master'] if log['finished'] else None,
             'Author': log.get('author', ''),
-            'Complete': log['finished'],
-            'Test Successful': not log['term_error'],
-            'Test Passed': log['test_passed']
+            'Complete': True if log['finished'] else 'show-spinner',
+            'Test Successful': not log['term_error'] if log['finished'] else None,
+            'Test Passed': log['test_passed'] if log['finished'] else None
             })
-    theadings = ('Date', 'Trigger', 'Author', 'Complete', 'Test Successful', 'Test Passed')
+    theadings = ('Date', 'Trigger', 'Master', 'Author', 'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', 
                             records = records, 
                             theadings = theadings)
@@ -107,7 +108,7 @@ def secret_build(code = None):
     if cisetup.secret_url != code:
         return 'Incorrect code', 403
 
-    approved, hook_info = github.process_request(request, cisetup.allowed_hooks)
+    approved, hook_info = github.process_request(request, cisetup)
     if not approved:
         return str(hook_info), 200
 
@@ -168,7 +169,7 @@ class SetupForm(Form):
     save_dir = fields.TextField('Save Directory', description=save_dir_descr)
 
     def validate_git_url(self, field):
-        if not field.data.startswith('http://'):
+        if not field.data.startswith('https://'):
             raise validators.ValidationError('git URL must start https://')
 
     def validate_save_dir(self, field):

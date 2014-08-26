@@ -68,7 +68,11 @@ table {
 }
 
 table.history td{
-    width: 16.66%;
+    width: 13.66%;
+}
+
+table.history td:first-child{
+    width: 18%;
 }
 
 .glyphicon-ok {

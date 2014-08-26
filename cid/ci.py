@@ -1,5 +1,5 @@
 from datetime import datetime as dtdt
-from . import app
+from . import app, github
 import subprocess
 import shlex
 import git
@@ -174,14 +174,15 @@ class Build(object):
                    'context': 'ci-donkey', 
                    'target_url': target_url
         }
-        payload = json.dumps(payload)
-        headers = {'Authorization': 'token %s' % self.token}
-        url = self.build_info['status_url']
-        r = requests.post(url, data=payload, headers=headers)
+        _, r = github.api(
+            url=self.build_info['status_url'],
+            token=self.token,
+            method=requests.post,
+            data=payload)
         self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
         if r.status_code != 201:
             self._log('recieved unexpected status code, response text:')
-            self._log('url posted to: %s' % url)
+            self._log('url posted to: %s' % self.build_info['status_url'])
             self._log(r.text[:1000])
 
     def _download(self):
@@ -334,6 +335,8 @@ def log_info(build_id, pre_script = None, main_script = None):
             log = re.sub(t, '<token>', log)
         status = {'build_id': build_id}
         status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
+        status['master'] = \
+            re.search('badge will be updated', log[:600]) is not None
         try:
             status.update(json.loads(log[:log.index(END_OF_BS)]))
         except Exception:
