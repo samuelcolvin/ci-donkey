@@ -335,8 +335,6 @@ def log_info(build_id, pre_script = None, main_script = None):
             log = re.sub(t, '<token>', log)
         status = {'build_id': build_id}
         status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
-        status['master'] = \
-            re.search('badge will be updated', log[:600]) is not None
         try:
             status.update(json.loads(log[:log.index(END_OF_BS)]))
         except Exception:
@@ -347,6 +345,8 @@ def log_info(build_id, pre_script = None, main_script = None):
         if prefin:
             prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
             prelog += LOG_PRE_FINISHED
+        status['master'] = \
+            re.search('badge will be updated', prelog) is not None
         term_error = TERMINAL_ERROR in log
         finished = LOG_FINISHED in log or term_error
         processing_complete = CLEANED_UP in log or term_error
