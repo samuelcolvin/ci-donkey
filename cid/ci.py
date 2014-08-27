@@ -140,20 +140,12 @@ class Build(object):
         decide whether we are on the default branch on the main repo,
         if so the badge will get updated, otherwise not.
         """
-        if self.build_info['trigger'] == 'manual':
-            self._log('manual build, badge will be updated')
+        if self.build_info['master']:
+            self._log('detected default branch, badge will be updated')
             return True
-        elif self.build_info['trigger'] == 'pull_request':
-            self._log('pull_request, no badge updates')
-            return False
-        if 'default_branch' not in self.build_info:
-            self._log('master_branch not in build_info, no badge updates')
-            return False
-        if not self.build_info.get('label', '').endswith(self.build_info['default_branch']):
+        else:
             self._log('not on default_branch, no badge updates')
             return False
-        self._log('detected default branch, badge will be updated')
-        return True
 
     def _update_status(self, status, message):
         assert status in ['pending', 'success', 'error', 'failure']
@@ -322,6 +314,25 @@ class Build(object):
     def _log(self, line, prefix = '#> '):
         self._message(prefix + line.strip('\n \t'))
 
+def _diff_string(start, finish):
+    def float2time(f):
+        if f is None: return ''
+        elif f >= 3600:
+            h = int(f / 3600)
+            return '%2d:%s' % (h, float2time(f % 3600))
+        elif f >= 60:
+            m = int(f / 60)
+            return '%02d:%s' % (m, float2time(f % 60))
+        else:
+            fmt = '%05.02f'
+            if round(f) == f:
+                fmt = '%02.0fs'
+            return fmt % f
+    diff = finish - start
+    print start
+    print finish
+    print diff.total_seconds()
+    return float2time(diff.total_seconds())
 
 def log_info(build_id, pre_script = None, main_script = None):
     if pre_script == None and main_script == None:
@@ -333,33 +344,49 @@ def log_info(build_id, pre_script = None, main_script = None):
         t = setup_cls().github_token
         if isinstance(t, basestring) and len(t) > 0:
             log = re.sub(t, '<token>', log)
-        status = {'build_id': build_id}
-        status['datetime'] = re.search('Starting build at (.*)', log).groups()[0]
+        status = {
+            'build_id': build_id, 
+            'term_error': True,
+            'finished': True,
+            'prelog': log,
+            'test_passed': None
+        }
         try:
-            status.update(json.loads(log[:log.index(END_OF_BS)]))
+            status['datetime'] = re.search(r'Starting build at (.*)', log).groups()[0]
+            finishes = re.findall(r'Build finished at (\d\d\d\d\d\d*_.*?),', log[-500:])
+            if len(finishes) > 0:
+                status['datetime_finish'] = finishes[-1]
+            if 'datetime_finish' in status and 'datetime' in status:
+                print status['datetime_finish']
+                status['time_taken'] = _diff_string(
+                    dt_from_str(status['datetime']), 
+                    dt_from_str(status['datetime_finish']))
+            try:
+                status.update(json.loads(log[:log.index(END_OF_BS)]))
+
+            except ValueError:
+                print 'error processing json build info from log %s' % build_id
+            prelog = log
+            mainlog = None
+            prefin = LOG_PRE_FINISHED in log
+            if prefin:
+                prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
+                prelog += LOG_PRE_FINISHED
+            term_error = TERMINAL_ERROR in log
+            finished = LOG_FINISHED in log or term_error
+            processing_complete = CLEANED_UP in log or term_error
+            status['test_passed'] = TEST_ERROR not in log and finished and not term_error
+            status['prelog'] = prelog
+            status['mainlog'] = mainlog
+            status['term_error'] = term_error
+            status['finished'] = finished
+            status['processing_complete'] = processing_complete
+            status['pre_script'] = pre_script
+            status['main_script'] = main_script
+            # import pprint
+            # pprint.pprint(status)
         except Exception:
-            print 'error processing json build info from log %s' % build_id
-        prelog = log
-        mainlog = None
-        prefin = LOG_PRE_FINISHED in log
-        if prefin:
-            prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
-            prelog += LOG_PRE_FINISHED
-        status['master'] = \
-            re.search('badge will be updated', prelog) is not None
-        term_error = TERMINAL_ERROR in log
-        finished = LOG_FINISHED in log or term_error
-        processing_complete = CLEANED_UP in log or term_error
-        status['test_passed'] = TEST_ERROR not in log and finished and not term_error
-        status['prelog'] = prelog
-        status['mainlog'] = mainlog
-        status['term_error'] = term_error
-        status['finished'] = finished
-        status['processing_complete'] = processing_complete
-        status['pre_script'] = pre_script
-        status['main_script'] = main_script
-        # import pprint
-        # pprint.pprint(status)
+            traceback.print_exc()
         return status
 
 def history():

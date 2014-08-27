@@ -4,14 +4,14 @@ function Spinner(canvas_sp, size){
   var lwidth = 2;
   var circ = 2 * Math.PI
   var curve = [
-    {angle: 0, rad: so2, dir: 1, arc: circ/8}, 
-    {angle: circ/2, rad: so2, dir: 1, arc: circ/8},
-    {angle: 0, rad: so2 - 3, dir: -1, arc: circ/6}, 
-    {angle: circ/2, rad: so2 - 3, dir: -1, arc: circ/6},
-    {angle: circ/4, rad: so2 - 6, dir: 1, arc: circ/5}, 
-    {angle: 3*circ/4, rad: so2 - 6, dir: 1, arc: circ/5}
+    {angle: 4 * circ/8, rad: so2, dir: 1, arc: circ/8}, 
+    {angle: 8 * circ/8, rad: so2, dir: 1, arc: circ/8},
+    {angle: 3 * circ/8, rad: so2 - 3, dir: -1, arc: circ/6}, 
+    {angle: 7 * circ/8, rad: so2 - 3, dir: -1, arc: circ/6},
+    {angle: 1.75 * circ/8, rad: so2 - 6, dir: 1, arc: circ/5}, 
+    {angle: 5.75 * circ/8, rad: so2 - 6, dir: 1, arc: circ/5}
   ];
-  var speed = 0.2;
+  var speed = 0.25;
   console.log(canvas_sp);
   canvas_sp.width = size;
   canvas_sp.height = size;
@@ -21,7 +21,7 @@ function Spinner(canvas_sp, size){
   
   function spin(){
     ctx_sp.clearRect(0,0,size,size);
-    var speed_mult = 1 + Math.sin(step * 0.2)*0.3;
+    var speed_mult = 1;// + Math.sin(step * 0.02)*0.4;
     step++;
 
     for(var i = 0; i < curve.length; i++){

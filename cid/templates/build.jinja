@@ -1,12 +1,13 @@
 {% extends 'base.jinja' %}
 
+{% import 'macros.jinja' as macros %}
 {% block content %}
 <div class="content">
   <h3>Build</h3>
   <p id="build-message">
     {% if build_status %}
-      <p>Test Status: <span class="glyphicon glyphicon-{{ 'ok' if build_status.success else 'remove' }}"></span></p>
-      <p>Test Passed: <span class="glyphicon glyphicon-{{ 'ok' if build_status.passed else 'remove' }}"></span></p>
+      <p>Test Status: {{ macros.display(build_status.success) }}</p>
+      <p>Test Passed: {{ macros.display(build_status.passed) }}</p>
     {% else %}
       building...
     {% endif %}

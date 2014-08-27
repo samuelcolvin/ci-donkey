@@ -68,12 +68,24 @@ table {
 }
 
 table.history td{
-    width: 13.66%;
+    width: 11.7%;
 }
 
-table.history td:first-child{
+table.history td:first-child {
     width: 18%;
 }
+
+table.history td:nth-child(4) {
+    max-width: 80px;
+    white-space: nowrap;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+}
+
+table.history td:nth-child(n+5) {
+    text-align: center;
+}
+
 
 .glyphicon-ok {
     color: green;

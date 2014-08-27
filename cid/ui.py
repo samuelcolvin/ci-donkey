@@ -41,16 +41,21 @@ def index():
     logs.reverse()
     records = []
     for log in logs:
+        master = None
+        if log['finished'] and 'master' in log and log['master']:
+            master = 'glyphicon-flag'
         records.append({
             'Date': date_link(log),
-            'Trigger': log.get('trigger', ''),
-            'Master': 'master' in log and log['master'] if log['finished'] else None,
+            'Trigger': log.get('trigger', None),
+            'Time Taken': log.get('time_taken', None),
             'Author': log.get('author', ''),
+            'Master': master,
             'Complete': True if log['finished'] else 'show-spinner',
             'Test Successful': not log['term_error'] if log['finished'] else None,
             'Test Passed': log['test_passed'] if log['finished'] else None
-            })
-    theadings = ('Date', 'Trigger', 'Master', 'Author', 'Complete', 'Test Successful', 'Test Passed')
+        })
+    theadings = ('Date', 'Time Taken', 'Trigger', 'Author', 'Master', 
+        'Complete', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', 
                             records = records, 
                             theadings = theadings)
@@ -65,7 +70,8 @@ def date_link(log):
 def build():
     build_info = OrderedDict([
         ('trigger', 'manual'),
-        ('author', current_user.email)
+        ('author', current_user.email),
+        ('master', True)
     ])
     build_id = ci.build(build_info)
     return render_template('build.jinja', pogress_url = url_for('progress', id = build_id))
@@ -79,15 +85,15 @@ def show_build(id = None):
         return render_template('build.jinja', pogress_url = url_for('progress', id = id))
     else:
         build_status = {
-            'success': not log['term_error'],
-            'passed': log['test_passed']
+            'success': not log.get('term_error', False),
+            'passed': log.get('test_passed', None)
         }
         return render_template('build.jinja', 
             build_status = build_status,
-            pre_build_log = log['prelog'],
-            main_build_log = log['mainlog'],
-            pre_script = '\n'.join(log['pre_script']),
-            main_script = '\n'.join(log['main_script']),
+            pre_build_log = log.get('prelog', ''),
+            main_build_log = log.get('mainlog', ''),
+            pre_script = '\n'.join(log.get('pre_script', '')),
+            main_script = '\n'.join(log.get('main_script', '')),
             log_extra = log
         )
 

@@ -31,12 +31,18 @@ function update(){
     finished('Error Occurred, stopping progress updates: <pre>' + data.responseText + '</pre>');
   });
 }
+var redirected = false;
+function redirect(build_id){
+  if (redirected) return;
+  redirected = true;
+  document.location.href = '/show_build/' + build_id;
+}
 
 function finished(message, build_id){
   clearInterval(clear_check);
   $('#build-message').html(message);
   if (build_id !== null){
-    document.location.href = '/show_build/' + build_id;
+    setTimeout(redirect, 1000, build_id);
   }
 }
 

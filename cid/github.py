@@ -27,6 +27,7 @@ def process_request(request, cisetup):
             info['label'] = rjson['ref']
             info['status_url'] = rjson['repository']['statuses_url']\
                     .replace('{sha}',info['sha'])
+            info['master'] = info['label'].endswith(info['default_branch'])
         elif info['trigger'] == 'pull_request':
             info['author'] = rjson['sender']['login']
             info['message'] = rjson['pull_request']['title']
@@ -40,6 +41,7 @@ def process_request(request, cisetup):
             info['status_url'] = rjson['pull_request']['statuses_url']
             info['fetch'] = 'pull/%(number)d/head:pr_%(number)d' % rjson
             info['fetch_branch'] = 'pr_%(number)d' % rjson
+            info['master'] = False
         statues, _ = api(info['status_url'], cisetup.github_token)
         if len(statues) > 0:
             return False, 'not running ci, status already exists for this commit'
@@ -66,4 +68,3 @@ def api(url, token, method=requests.get, data=None):
         return json.loads(r.text), r
     except ValueError:
         return None, r
-

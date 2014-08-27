@@ -1,16 +1,5 @@
 {% extends 'base.jinja' %}
-
-{% macro display(v) %}
-  {% if v|string in ['True', 'False'] %}
-    <span class="glyphicon glyphicon-{{ 'ok' if v else 'remove' }}"></span>
-  {% elif v|string == 'None' %}
-    <span class="none"></span>
-  {% elif v|string == 'show-spinner' %}
-    <canvas class="spinner"></canvas>
-  {% else %}
-    {{ v|safe }}
-  {% endif %}
-{% endmacro %}
+{% import 'macros.jinja' as macros %}
 
 {% block content %}
 <div class="content">
@@ -28,7 +17,7 @@
     {% for record in records %}
       <tr>
       {% for head in theadings %}
-        <td>{{ display(record[head]) }}</td>
+        <td>{{ macros.display(record[head]) }}</td>
       {% endfor %}
       </tr>
     {% endfor %}
