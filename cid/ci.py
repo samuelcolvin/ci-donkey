@@ -14,6 +14,11 @@ import tempfile
 import requests
 import string
 import random
+# try to import ujson but fallback to normal json
+try:
+    import ujson
+except ImportError:
+    ujson = json
 
 def dt_from_str(dstr_in):
     # remove %s encoding of unix time stamp
@@ -392,7 +397,7 @@ def log_info(build_id, pre_script = None, main_script = None):
 def history():
     logs = []
     if os.path.exists(app.config['LOG_FILE']):
-        logs = json.load(open(app.config['LOG_FILE'], 'r'))
+        logs = ujson.load(open(app.config['LOG_FILE'], 'r'))
     return logs
 
 def build_script_path(id):

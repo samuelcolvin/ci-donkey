@@ -68,7 +68,7 @@ table {
 }
 
 table.history td{
-    width: 11.7%;
+    width: 16%;
 }
 
 table.history td:first-child {
@@ -76,7 +76,7 @@ table.history td:first-child {
 }
 
 table.history td:nth-child(4) {
-    max-width: 80px;
+    max-width: 100px;
     white-space: nowrap;
     overflow: hidden !important;
     text-overflow: ellipsis;
@@ -84,6 +84,7 @@ table.history td:nth-child(4) {
 
 table.history td:nth-child(n+5) {
     text-align: center;
+    width: 11%;
 }
 
 

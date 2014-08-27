@@ -50,12 +50,11 @@ def index():
             'Time Taken': log.get('time_taken', None),
             'Author': log.get('author', ''),
             'Master': master,
-            'Complete': True if log['finished'] else 'show-spinner',
-            'Test Successful': not log['term_error'] if log['finished'] else None,
+            'Test Successful': not log['term_error'] if log['finished'] else 'show-spinner',
             'Test Passed': log['test_passed'] if log['finished'] else None
         })
-    theadings = ('Date', 'Time Taken', 'Trigger', 'Author', 'Master', 
-        'Complete', 'Test Successful', 'Test Passed')
+    theadings = ('Date', 'Time Taken', 'Trigger', 'Author', 
+        'Master', 'Test Successful', 'Test Passed')
     return render_template('index.jinja', 
                             records = records, 
                             theadings = theadings)
