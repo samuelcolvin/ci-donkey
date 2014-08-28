@@ -128,3 +128,9 @@ table.history td:nth-child(n+5) {
     height: 150px;
     overflow: auto;
 }
+
+#spinner {
+    margin: -10px 0;
+    top: -5px;
+    position: relative;
+}
