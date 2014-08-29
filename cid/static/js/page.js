@@ -1,7 +1,7 @@
 function Spinner(canvas_sp, size){
   var rate = 40;
   var so2 = size/2;
-  var lwidth = 2;
+  var lwidth = 1.5;
   var circ = 2 * Math.PI
   var curve = [
     {angle: 4 * circ/8, rad: so2, dir: 1, arc: circ/8}, 

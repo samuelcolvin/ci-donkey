@@ -42,7 +42,7 @@ function finished(message, build_id){
   clearInterval(clear_check);
   $('#build-message').html(message);
   if (build_id !== null){
-    setTimeout(redirect, 1000, build_id);
+    setTimeout(redirect, 2500, build_id);
   }
 }
 
