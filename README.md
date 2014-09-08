@@ -63,3 +63,7 @@ You can check the log to see if it's started ok:
 If everything has gone ok you can restart nginx:
 
     sudo service nginx restart
+    
+You can indicate that you are in CI for your scripts by setting
+
+    export CIDONKEY=TRUE
