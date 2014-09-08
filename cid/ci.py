@@ -235,10 +235,10 @@ class Build(object):
                 stdout, stderr = p.communicate()
                 if not mute_stdout:
                     self._log(stdout, '')
-                if not mute_stderr and len(stderr) > 0:
-                    self._log(stderr, '')
                 if p.returncode != 0:
                     raise CommandError(stderr)
+                elif not mute_stderr and len(stderr) > 0:
+                    self._log(stderr)
             except CommandError, e:
                 raise e
             except Exception, e:
