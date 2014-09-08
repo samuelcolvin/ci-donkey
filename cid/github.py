@@ -19,6 +19,7 @@ def process_request(request, cisetup):
             return False, '"%s" is not an allowed webhook.' % info['trigger']
         if info['trigger'] == 'push':
             info['author'] = rjson['pusher']['name']
+            # TODO if head_commit = None return not building
             info['message'] = rjson['head_commit']['message']
             info['display_url'] = rjson['head_commit']['url']
             info['private'] = rjson['repository']['private']
@@ -49,13 +50,14 @@ def process_request(request, cisetup):
         print 'Exception getting hook details: %r' % e
         try:
             requestinfo = str(request.headers)
+            requestinfo += 'Error: %r\n' % e
             requestinfo += '\n' + str(rjson)
             fn = '/tmp/%s.log' % uuid.uuid4()
             open(fn, 'w').write(requestinfo)
             print 'data saved to %s' % fn
         except Exception:
             pass
-        return e
+        return False, e
     return True, info
 
 def api(url, token, method=requests.get, data=None):
