@@ -282,15 +282,14 @@ class Build(object):
         self._message(CLEANED_UP)
 
         # make sure log file has finished being written
-        time.sleep(2)
+        time.sleep(5)
         logs = [log for log in history() if log['build_id'] != self.stamp]
         linfo = log_info(self.stamp, self.pre_script, self.main_script)
         logs.append(linfo)
         self._save_logs(logs)
         
         os.remove(self.log_file)
-        if self.delete_after:
-            os.remove(build_script_path(self.stamp))
+        os.remove(build_script_path(self.stamp))
 
     def _save_logs(self, logs):
         max_len = app.config['MAX_LOG_LENGTH']
