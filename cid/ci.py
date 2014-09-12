@@ -86,8 +86,8 @@ class Build(object):
         run the build script.
         """
         try:
-            if not self.prebuild(): return
-            if not self.main_build(): return
+            if self.prebuild():
+                self.main_build()
         except Exception, e:
             raise e
         finally:
@@ -228,10 +228,13 @@ class Build(object):
             self._log(command, 'EXEC> ')
             cargs = shlex.split(command)
             try:
+                cienv = os.environ.copy()
+                cienv['CIDONKEY'] = 'TRUE'
                 p = subprocess.Popen(cargs,
                     cwd=self.repo_path, 
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
+                    stderr=subprocess.PIPE,
+                    env=cienv)
                 stdout, stderr = p.communicate()
                 if not mute_stdout:
                     self._log(stdout, '')
@@ -284,9 +287,9 @@ class Build(object):
         linfo = log_info(self.stamp, self.pre_script, self.main_script)
         logs.append(linfo)
         self._save_logs(logs)
-
+        
+        os.remove(self.log_file)
         if self.delete_after:
-            os.remove(self.log_file)
             os.remove(build_script_path(self.stamp))
 
     def _save_logs(self, logs):
