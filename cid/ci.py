@@ -208,7 +208,7 @@ class Build(object):
             raise KnownError('Repo has no CI script file: %s' % ci_script_name)
         ci_script = open(ci_script_path, 'r').read()
         self._log('found CI script: %s' % ci_script_name)
-        # self._log('original CI script content: \n%s' % ci_script)
+        self._log('original CI script: \n%s' % ci_script.replace('\n', '\n    |'))
         ci_script = self._jinja_script(ci_script)
         self._log('CI script processed by jinja2')
         if self.setup.main_tag not in ci_script:
