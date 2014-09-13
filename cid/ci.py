@@ -14,6 +14,8 @@ import tempfile
 import requests
 import string
 import random
+import jinja2
+import hashlib
 # try to import ujson but fallback to normal json
 try:
     import ujson
@@ -206,6 +208,9 @@ class Build(object):
             raise KnownError('Repo has no CI script file: %s' % ci_script_name)
         ci_script = open(ci_script_path, 'r').read()
         self._log('found CI script: %s' % ci_script_name)
+        self._log('original CI script content: \n%s' % ci_script)
+        ci_script = self._jinja_script(ci_script)
+        self._log('CI script processed by jinja2')
         if self.setup.main_tag not in ci_script:
             raise KnownError('Config has no divider: %s' % self.setup.main_tag)
         current_script = []
@@ -219,6 +224,19 @@ class Build(object):
             current_script.append(line)
         obj = (self.pre_script, self.main_script)
         json.dump(obj, open(build_script_path(self.stamp), 'w'), indent = 2)
+
+    def _jinja_script(self, script):
+        def file_hash(file_name):
+            path = os.path.join(self.repo_path, file_name)
+            hasher = hashlib.md5()
+            with open(path, 'rb') as f:
+                hasher.update(f.read())
+            return hasher.hexdigest()
+
+        t = jinja2.Template(script)
+        t.globals['path_exists'] = os.path.exists
+        t.globals['file_hash'] = file_hash
+        return t.render()
 
     def _execute(self, commands, mute_stderr=False, mute_stdout=False):
         for command in commands:
