@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{% block title %}ci-donkey{% endblock %}</title>
+    {% block head_meta %}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="">
+        <meta name="author" content="">
+    {% endblock %}
+    {% block head %}
+    <link rel="icon" type="image/png" href={{ 'favicon.ico'|static }} />
+    <link href={{ 'libs/css/bootstrap.min.css'|static }} rel="stylesheet">
+    <link href={{ 'css/styles.css'|static }} rel="stylesheet">
+    {% endblock %}
+  </head>
+  <body>
+  
+    <div class="container">
+      <div class="navbar navbar-default" role="navigation">
+        <div>
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="{{ url('build-list') }}">{{ self.title() }}</a>
+          </div>
+          <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+              {% block main_menu %}
+                {% for url, name in main_menu %}
+                <li class="{#{% if item.active %}active{% endif %}#}"><a href="{{ url }}">{{ name }}</a></li>
+                {% endfor %}
+              {% endblock %}
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              {% block menu_right %}
+              {% endblock %}
+              {% if admin_access %}
+                <li><a href="{{ url('admin:index') }}">Admin</a></li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      {% if messages %}
+        <div class="alert alert-info alert-dismissible">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}
+      {% endblock %}
+
+    </div>
+    
+
+    <script src={{ 'libs/js/jquery-1.11.0.min.js'|static }}></script>
+    <!-- <script src={{ 'libs/js/lodash.min.js'|static }}></script> -->
+    <script src={{ 'libs/js/bootstrap.min.js'|static }}></script>
+    <script src={{ 'libs/js/bootbox.min.js'|static }}></script>
+    <script src={{ 'libs/js/select2.min.js'|static }}></script>
+    {% block extra_js %}
+    {% endblock %}
+  </body>
+</html>
