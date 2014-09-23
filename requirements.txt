@@ -3,8 +3,9 @@ GrabLib==0.05
 Jinja2==2.7.3
 MarkupSafe==0.23
 argparse==1.2.1
+backports.ssl-match-hostname==3.4.0.2
 django-jinja==1.0.4
--e git+https://github.com/samuelcolvin/django-jinja-bootstrap-form.git@ea174e4f4d3aa13bbb171c6e66344a5df39c8582#egg=django_jinja_bootstrap_form-master == 4.0
+docker-py==0.5.0
 ipython==2.2.0
 ply==3.4
 psycopg2==2.5.4
@@ -12,4 +13,5 @@ requests==2.4.1
 six==1.8.0
 slimit==0.8.1
 termcolor==1.1.0
+websocket-client==0.18.0
 wsgiref==0.1.2

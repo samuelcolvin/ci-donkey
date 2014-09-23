@@ -47,9 +47,11 @@ class Build(models.Model):
     finished = models.DateTimeField()
     modified = models.DateTimeField(auto_now=True)
 
+    container_id = models.CharField('container ID', max_length=100)
+
     pre_log = models.TextField('pre build log', null=True)
     main_log = models.TextField('main build log', null=True)
-    complete = models.BooleanField('processign complete', default=False)
+    complete = models.BooleanField('processing complete', default=False)
     test_success = models.BooleanField('test succeeded', default=False)
     test_passed = models.BooleanField('test passed', default=False)
     coverage = models.DecimalField(max_digits=5, decimal_places=2, null=True)
