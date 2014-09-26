@@ -9,7 +9,7 @@ class Project(models.Model):
                                               'request statuses on all repos.')
     private = models.BooleanField(default=True)
     github_url = models.URLField('github URL', null=True, help_text='This should be the https url for github.')
-    ci_url = models.URLField('CI URL', null=True, help_text='URL of this site, used for "datails" on commit statuses.')
+    ci_url = models.URLField('CI URL', help_text='URL of this site, used for "datails" on commit statuses.')
     webhooks = models.CharField(max_length=100, default='push, pull_request',
                                 help_text='Comma seperated list of webooks to accept from github, see here '
                                           'for details.Normally push and pull_request will suffice.')
@@ -18,6 +18,15 @@ class Project(models.Model):
     script_split = models.CharField('script splitter', max_length=100, default='**MAIN SCRIPT**',
                                     help_text='tag splitting the pre script and main script, this should '
                                               'be written to stdout to start the main script.')
+    docker_image = models.CharField('docker image', max_length=100, default='cidonkey',
+                                    help_text='Name of the docker image to use for CI.')
+
+    SVG_NULL = 'null.svg'
+    SVG_IN_PROGRESS = 'in_progress.svg'
+    SVG_FAILING = 'failing.svg'
+    SVG_PASSING = 'passing.svg'
+    SVG_STATUSES = [(f, f) for f in (SVG_NULL, SVG_IN_PROGRESS, SVG_FAILING, SVG_PASSING)]
+    status_svg = models.CharField('status SVG', choices=SVG_STATUSES, default=SVG_NULL, editable=False, max_length=20)
 
     def __unicode__(self):
         return self.name
@@ -27,11 +36,11 @@ def archive_dir(instance, filename):
     return '%s.zip' % instance.sha
 
 
-class Build(models.Model):
+class BuildInfo(models.Model):
     project = models.ForeignKey(Project, related_name='builds')
 
-    sha = models.CharField('commit sha', max_length=50)
-    trigger = models.CharField('trigger', max_length=20, null=True)
+    sha = models.CharField('commit sha', max_length=50, null=True)
+    trigger = models.CharField('trigger', max_length=20)
     action = models.CharField('action', max_length=20, null=True)
     label = models.CharField('Branch label', max_length=200, null=True)
     on_master = models.BooleanField('on master', default=False)
@@ -44,21 +53,28 @@ class Build(models.Model):
     fetch_branch = models.CharField('fetch branch name', max_length=200, null=True)
 
     start = models.DateTimeField(auto_now_add=True)
-    finished = models.DateTimeField()
+    finished = models.DateTimeField(null=True)
     modified = models.DateTimeField(auto_now=True)
 
-    container_id = models.CharField('container ID', max_length=100)
+    container = models.CharField('container ID', max_length=100, null=True)
+    temp_dir = models.CharField('temporary directory', max_length=100, null=True)
 
     pre_log = models.TextField('pre build log', null=True)
     main_log = models.TextField('main build log', null=True)
     complete = models.BooleanField('processing complete', default=False)
-    test_success = models.BooleanField('test succeeded', default=False)
+    test_success = models.BooleanField('test succeeded', default=True)
     test_passed = models.BooleanField('test passed', default=False)
     coverage = models.DecimalField(max_digits=5, decimal_places=2, null=True)
 
     archive = models.FileField(upload_to=archive_dir, null=True)
 
+    def successful(self):
+        return self.test_success and self.test_passed
+    successful.short_description = 'successful'
+
     def time_taken(self):
+        if not self.finished:
+            return ''
         def float2time(f):
             if f is None:
                 return ''
@@ -79,3 +95,7 @@ class Build(models.Model):
 
     def __unicode__(self):
         return self.sha or 'unknown'
+
+    class Meta:
+        verbose_name = 'Build'
+        verbose_name_plural = 'Builds'

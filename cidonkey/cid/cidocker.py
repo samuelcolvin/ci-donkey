@@ -1,3 +1,4 @@
+from django.conf import settings
 import docker
 import re
 import io
@@ -15,12 +16,15 @@ def build_image(docker_file, image_name='cidonkey'):
     return ''.join([str(r.values()[0]) for r in results])
 
 
-def start_ci(image_name):
+def start_ci(image_name, src_dir):
     c = _get_con()
-    con = c.create_container(image=image_name)
+    con = c.create_container(image=image_name, volumes=[settings.PERSISTENCE_DIR, src_dir])
     if con['Warnings']:
         print 'Warning:', con['Warnings']
-    c.start(con)
+    c.start(con, binds={
+        '/persistence/': {'bind': settings.PERSISTENCE_DIR, 'ro': False},
+        '/src/': {'bind': src_dir, 'ro': True}
+    })
     return con['Id']
 
 

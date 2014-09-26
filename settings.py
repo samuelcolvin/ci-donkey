@@ -67,7 +67,6 @@ ROOT_URLCONF = 'urls'
 
 WSGI_APPLICATION = 'wsgi.application'
 
-
 DB_SQLITE3 = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
@@ -81,14 +80,15 @@ DATABASES = {'default': DB_SQLITE3}
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
+USE_I18N = False
+USE_L10N = False
+USE_TZ = False
 
-USE_I18N = True
-
-USE_L10N = True
-
-USE_TZ = True
-
+STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
+
+MEDIA_ROOT = 'mediafiles'
+MEDIA_URL = '/media/'
 
 TEMPLATE_LOADERS = (
     'django_jinja.loaders.FileSystemLoader',
@@ -109,3 +109,7 @@ def inspect_func(obj):
     import pdb; pdb.set_trace()
 
 JINJA2_CONSTANTS = {'inspect': inspect_func}
+
+# docker settings:
+
+PERSISTENCE_DIR = '/tmp/ci-persistence'

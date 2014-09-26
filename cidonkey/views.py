@@ -1,10 +1,18 @@
+import decimal
+import json
+import datetime
 from django.core.urlresolvers import reverse
 from django.db.models import FieldDoesNotExist
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from django.views.decorators.http import require_POST
 from django.views.generic.list import ListView
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+import django.utils.formats as django_format
 
-from .models import Build
+from .cid import ci
+from .models import BuildInfo, Project
 
 
 def cid_context(request):
@@ -25,10 +33,10 @@ class BuildList(ListView):
     """
     List of previous builds
     """
-    model = Build
+    model = BuildInfo
     template_name = 'build_list.jinja'
     link_column = 'start'
-    columns = ('start', 'time_taken', 'trigger', 'author', 'on_master')
+    columns = ('start', 'time_taken', 'trigger', 'author', 'successful')
 
     def get_context_data(self, **kwargs):
         context = super(BuildList, self).get_context_data(**kwargs)
@@ -58,3 +66,44 @@ class BuildList(ListView):
 
 
 build_list = login_required(BuildList.as_view())
+
+
+@login_required
+@require_POST
+def build(request):
+    build_info = BuildInfo.objects.create(trigger='manual', project=get_project())
+    ci.build(build_info)
+    return redirect(reverse('build-list'))
+
+
+class UniversalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, decimal.Decimal):
+            return '%0.2f' % obj
+        if isinstance(obj, datetime.datetime):
+            return django_format.date_format(obj, 'DATETIME_FORMAT')
+        try:
+            return json.JSONEncoder.default(self, obj)
+        except TypeError:
+            return '%s: %r' % (obj.__class__.__name__, obj)
+
+
+def check_build(build_info):
+    bi = ci.check(build_info)
+    extract = ['sha', 'complete', 'test_success', 'test_passed', 'start', 'finished', 'pre_log', 'main_log']
+    return {at: getattr(bi, at) for at in extract}
+
+
+@login_required
+def check_all(request):
+    builds = [check_build(bi) for bi in BuildInfo.objects.filter(complete=False)]
+    print builds
+    response = {'check_count': len(builds), 'builds': builds}
+    return HttpResponse(json.dumps(response, indent=2, cls=UniversalEncoder), content_type='application/json')
+
+
+def get_project():
+    """
+    gets the first project, stop gap until we support more than one project
+    """
+    return Project.objects.first()

@@ -1,242 +1,144 @@
-from datetime import datetime as dtdt
-from . import app, github
 import subprocess
 import shlex
-import git
+from cidonkey.models import BuildInfo
 import os
-import json
 import re
 import thread
 import traceback
-import shutil
-import time
 import tempfile
 import requests
-import string
-import random
-import jinja2
-import hashlib
-# try to import ujson but fallback to normal json
-try:
-    import ujson
-except ImportError:
-    ujson = json
+import datetime
+from . import cidocker, github, common
 
-def dt_from_str(dstr_in):
-    # remove %s encoding of unix time stamp
-    dstr = re.sub('\d\d\d\d\d\d*', '', dstr_in)
-    fmat = app.config['DATETIME_FORMAT'].replace('%s', '')
-    try:
-        return dtdt.strptime(dstr, fmat)
-    except ValueError:
-        return dtdt(1970,1,1)
 
-def setup_cls():
-    if os.path.exists(app.config['SETUP_FILE']):
-        obj = json.load(open(app.config['SETUP_FILE'], 'r'))
-        obj['datetime'] = dt_from_str(obj['datetime'])
-        return type('CISetup', (), obj)
+def build(bi):
+    b = BuildProcess(bi)
+    thread.start_new_thread(b.start_build, ())
 
-def build(build_info):
-    b = Build(build_info)
-    thread.start_new_thread(b.build, ())
-    return b.stamp
 
-def _now():
-    return dtdt.utcnow().strftime(app.config['DATETIME_FORMAT'])
+def check(bi):
+    b = BuildProcess(bi)
+    return b.check_docker()
 
-def _build_log_path(id):
-    return os.path.join('/tmp', id + '.log')
 
-class KnownError(Exception):
-    pass
-
-class CommandError(Exception):
-    pass
-
-TERMINAL_ERROR =   '#############   TERMINAL ERROR   #############\n'
-TEST_ERROR =       '#############     TEST ERROR     #############\n'
-LOG_PRE_FINISHED = '############# PRE BUILD FINISHED #############\n'
-LOG_FINISHED =     '#############      FINISHED      #############\n'
-CLEANED_UP =       '#############     CLEANED UP     #############\n'
-END_OF_BS =        '==============================================\n'
-
-class Build(object):
+class BuildProcess(object):
     def __init__(self, build_info):
-        self.setup = setup_cls()
-        self.token = self.setup.github_token
+        assert isinstance(build_info, BuildInfo), 'build_info must be an instance of BuildInfo, not %s' % \
+                                                  build_info.__class__.__name__
+        self.build_info = build_info
+        self.project = build_info.project
+        self.token = self.project.github_token
         self.valid_token = isinstance(self.token, basestring) and len(self.token) > 0
-        short_random = ''.join(random.choice(string.ascii_lowercase + string.digits)
-            for i in range(5))
-        self.stamp = _now() + '_' + short_random
-        self.delete_after = not self.setup.save_repo
-        self.log_file = _build_log_path(self.stamp)
-        self.build_info = dict(build_info)
-        self._message(json.dumps(build_info, indent=2))
-        self._message(END_OF_BS)
-        self._log('Starting build at %s' % _now())
-        self._log('log filename: %s' % self.log_file)
-        save_dir = self.setup.save_dir if self.setup.save_dir else tempfile.gettempdir()
-        self.repo_path = os.path.join(save_dir, self.stamp)
-        self._log('project directory: %s' % self.repo_path)
-        self.pre_script = []
-        self.main_script = []
         self.badge_updates = False
+        changed = False
+        if self.build_info.temp_dir is None:
+            self.build_info.temp_dir = tempfile.mkdtemp()
+            changed = True
+        if self.build_info.pre_log is None:
+            self.build_info.pre_log = ''
+            changed = True
+        if changed:
+            self.build_info.save()
 
-    def build(self):
+    def start_build(self):
         """
         run the build script.
         """
         try:
-            if self.prebuild():
-                self.main_build()
-        except Exception, e:
-            raise e
-        finally:
-            self._finish()
-
-    def prebuild(self):
-        """
-        run before actual build to setup environment.
-        """
-        try:
-            # first we save a blank log item so it's in history
-            logs = history()
-            logs.append(log_info(self.stamp))
-            self._save_logs(logs)
-
             self._set_url()
-            self.badge_updates = self._decide_badge_updates()
+            self.badge_updates = self.build_info.on_master
+            self._log('doing badge updates: %r' % self.badge_updates)
             self._update_status('pending', 'CI build underway')
             self._set_svg('in_progress')
             self._download()
-            self._get_ci_script()
-            self._execute(self.pre_script)
-        except Exception, e:
-            self._error(e)
-            return False
-        else:
-            self._message(LOG_PRE_FINISHED)
-            return True
+            self.build_info.container = cidocker.start_ci(self.project.docker_image, self.build_info.temp_dir)
+        except (common.KnownError, common.CommandError), e:
+            self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
+            self._process_error()
+        except Exception:
+            self._log(traceback.format_exc())
+            self._process_error()
+        finally:
+            self.build_info.save()
+        return self.build_info
 
-    def main_build(self):
-        """
-        run the build script
-        """
+    def check_docker(self):
         try:
-            self._execute(self.main_script)
+            status = cidocker.check_progress(self.build_info.container)
+            if not status:
+                return
+            return_code, logs = status
+            self.build_info.test_passed = return_code == 0
+            self.build_info.main_log = logs
+
+            if self.build_info.test_passed:
+                self._update_status('success', 'CI Success')
+            else:
+                self._update_status('failure', 'Tests failed')
+            self._set_svg(self.build_info.test_passed)
         except Exception, e:
-            self._error(e, True)
-            return False
-        else:
-            self._message(LOG_FINISHED)
-            return True
+            self._log(traceback.format_exc())
+            self._process_error()
+        finally:
+            self.build_info.complete = True
+            self.build_info.finished = datetime.datetime.now()
+            self.build_info.save()
+        return self.build_info
+
+    def _process_error(self):
+        self._update_status('error', 'Error running tests')
+        self._set_svg(False)
+        self.build_info.test_success = False
+        self.build_info.complete = True
+        self.build_info.finished = datetime.datetime.now()
 
     def _set_url(self):
         """
         generate the url which will be used to clone the repo.
         """
-        self.url = self.setup.git_url
-        private = self.build_info.get('private', True)
-        if private and self.valid_token:
+        self.url = self.project.github_url
+        if self.project.private and self.valid_token:
             self.url = re.sub('https://', 'https://%s@' % self.token, self.url)
         self._log('clone url: %s' % self.url)
 
-    def _decide_badge_updates(self):
-        """
-        decide whether we are on the default branch on the main repo,
-        if so the badge will get updated, otherwise not.
-        """
-        if self.build_info['master']:
-            self._log('detected default branch, badge will be updated')
-            return True
-        else:
-            self._log('not on default_branch, no badge updates')
-            return False
-
     def _update_status(self, status, message):
         assert status in ['pending', 'success', 'error', 'failure']
-        if not 'status_url' in self.build_info:
+        if not self.build_info.status_url:
             return
         if not self.valid_token:
             self._log('WARNING: no valid token found, cannot update status of pull request')
             return
-        try:
-            if self.setup.this_url == '':
-                raise Exception('this_url is null')
-            target_url = os.path.join(self.setup.this_url, 'show_build', self.stamp)
-        except Exception, e:
-            self._log('error getting target_url for status update: %r' % e)
-            target_url = 'https://github.com/samuelcolvin/ci-donkey'
-        payload = {'state': status, 
-                   'description': message, 
-                   'context': 'ci-donkey', 
-                   'target_url': target_url
+        target_url = self.project.ci_url + 'xyz'# + reverse('view-build', kwargs={'pk':self.build_info.id)
+        payload = {
+            'state': status,
+            'description': message,
+            'context': 'ci-donkey',
+            'target_url': target_url
         }
         _, r = github.api(
-            url=self.build_info['status_url'],
+            url=self.build_info.status_url,
             token=self.token,
             method=requests.post,
             data=payload)
         self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
         if r.status_code != 201:
-            self._log('recieved unexpected status code, response text:')
-            self._log('url posted to: %s' % self.build_info['status_url'])
+            self._log('received unexpected status code, response text:')
+            self._log('url posted to: %s' % self.build_info.status_url)
             self._log(r.text[:1000])
 
     def _download(self):
         self._log('cloning...')
-        git.Git().clone(self.url, self.repo_path)
+        commands = ['git clone %s %s' % (self.url, self.build_info.temp_dir)]
         self._log('cloned code successfully')
-        if 'fetch' in self.build_info:
-            self._log('fetching branch %(fetch)s' % self.build_info)
-            commands = ['git fetch origin %(fetch)s' % self.build_info]
-            if 'fetch_branch' in self.build_info:
-                commands.append('git checkout %(fetch_branch)s' % self.build_info)
-            self._execute(commands)
-        if 'sha' in self.build_info:
-            self._log('checkout out %(sha)s' % self.build_info)
-            commands = ['git checkout %(sha)s' % self.build_info]
-            self._execute(commands)
-            # repo = git.Repo(self.repo_path)
-            # repo.git.checkout(self.build_info['sha'])
-
-    def _get_ci_script(self):
-        ci_script_name = self.setup.ci_script
-        ci_script_path = os.path.join(self.repo_path, ci_script_name)
-        if not os.path.exists(ci_script_path):
-            raise KnownError('Repo has no CI script file: %s' % ci_script_name)
-        ci_script = open(ci_script_path, 'r').read()
-        self._log('found CI script: %s' % ci_script_name)
-        self._log('original CI script: \n%s' % ci_script.replace('\n', '\n    |'))
-        ci_script = self._jinja_script(ci_script)
-        self._log('CI script processed by jinja2')
-        if self.setup.main_tag not in ci_script:
-            raise KnownError('Config has no divider: %s' % self.setup.main_tag)
-        current_script = []
-        for line in ci_script.split('\n'):
-            if self.setup.pre_tag in line or line == '':
-                current_script = self.pre_script
-                continue
-            if self.setup.main_tag in line:
-                current_script = self.main_script
-                continue
-            current_script.append(line)
-        obj = (self.pre_script, self.main_script)
-        json.dump(obj, open(build_script_path(self.stamp), 'w'), indent = 2)
-
-    def _jinja_script(self, script):
-        def file_hash(file_name):
-            path = os.path.join(self.repo_path, file_name)
-            hasher = hashlib.md5()
-            with open(path, 'rb') as f:
-                hasher.update(f.read())
-            return hasher.hexdigest()
-
-        t = jinja2.Template(script)
-        t.globals['path_exists'] = os.path.exists
-        t.globals['file_hash'] = file_hash
-        return t.render()
+        if self.build_info.fetch_cmd:
+            self._log('fetching branch ' + self.build_info.fetch_cmd)
+            commands.append('git fetch origin ' + self.build_info.fetch_cmd)
+            if self.build_info.fetch_branch:
+                commands.append('git checkout ' + self.build_info.fetch_branch)
+        if self.build_info.sha:
+            self._log('checkout out ' + self.build_info.sha)
+            commands.append('git checkout ' + self.build_info.sha)
+        self._execute(commands)
 
     def _execute(self, commands, mute_stderr=False, mute_stdout=False):
         for command in commands:
@@ -247,96 +149,40 @@ class Build(object):
             cargs = shlex.split(command)
             try:
                 cienv = os.environ.copy()
-                cienv['CIDONKEY'] = 'TRUE'
+                cienv['CIDONKEY'] = '1'
                 p = subprocess.Popen(cargs,
-                    cwd=self.repo_path, 
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    env=cienv)
+                                     cwd=self.build_info.temp_dir,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,
+                                     env=cienv)
                 stdout, stderr = p.communicate()
                 if not mute_stdout:
                     self._log(stdout, '')
                 if p.returncode != 0:
-                    raise CommandError(stderr)
+                    raise common.CommandError(stderr)
                 elif not mute_stderr and len(stderr) > 0:
                     self._log(stderr)
-            except CommandError, e:
+            except common.CommandError, e:
                 raise e
             except Exception, e:
-                raise KnownError('%s: %s' % (e.__class__.__name__, str(e)))
-
-    def _error(self, e, errors_expected = False):
-        if errors_expected and isinstance(e, CommandError):
-            self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
-            self._message(TEST_ERROR)
-            self._message(LOG_FINISHED)
-            return
-        if isinstance(e, KnownError) or isinstance(e, CommandError):
-            self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
-        else:
-            tb = traceback.format_exc()
-            self._log(tb)
-        self._message(TERMINAL_ERROR)
-
-    def _finish(self):
-        self._log('Build finished at %s, cleaning up' % _now())
-
-        linfo = log_info(self.stamp, self.pre_script, self.main_script)
-        if linfo['test_passed']:
-            self._update_status('success', 'CI Success')
-        elif linfo['term_error']:
-            self._update_status('error', 'Error running tests')
-        else:
-            self._update_status('failure', 'Tests failed')
-        self._set_svg(linfo['test_passed'])
-
-        if self.delete_after and os.path.exists(self.repo_path):
-            self._log('deleting repo dir %s' % self.repo_path)
-            shutil.rmtree(self.repo_path, ignore_errors = False)
-        else:
-            self._log('removing all untracked file from repo...')
-            self._execute(['git clean -f -d -X'], mute_stdout=True)
-
-        self._message(CLEANED_UP)
-
-        # make sure log file has finished being written
-        time.sleep(5)
-        logs = [log for log in history() if log['build_id'] != self.stamp]
-        linfo = log_info(self.stamp, self.pre_script, self.main_script)
-        logs.append(linfo)
-        self._save_logs(logs)
-        
-        os.remove(self.log_file)
-        os.remove(build_script_path(self.stamp))
-
-    def _save_logs(self, logs):
-        max_len = app.config['MAX_LOG_LENGTH']
-        if max_len:
-            logs = logs[-max_len:]
-        json.dump(logs, open(app.config['LOG_FILE'], 'w'), indent = 2)
-        return logs
+                raise common.KnownError('%s: %s' % (e.__class__.__name__, str(e)))
 
     def _set_svg(self, status):
         if not self.badge_updates:
             return
         if status == 'in_progress':
-            filename = 'in_progress.svg'
+            status_svg = 'in_progress.svg'
         else:
-            filename = 'passing.svg' if status else 'failing.svg'
-        self._log('setting status svg to %s' % filename)
-        thisdir = os.path.dirname(__file__)
-        src = os.path.join(thisdir, 'static', filename)
-        shutil.copyfile(src, app.config['STATUS_SVG_FILE'])
+            status_svg = 'passing.svg' if status else 'failing.svg'
+        self._log('setting status svg to %s' % status_svg)
+        self.project.status_svg = status_svg
 
     def _message(self, message):
-        with open(self.log_file, 'a') as logfile:
-            if message.endswith('\n'):
-                logfile.write(message)
-            else:
-                logfile.write(message + '\n')
-            logfile.flush()
+        if not message.endswith('\n'):
+            message += '\n'
+        self.build_info.pre_log += message
 
-    def _log(self, line, prefix = '#> '):
+    def _log(self, line, prefix='#> '):
         self._message(prefix + line.strip('\n \t'))
 
 def _diff_string(start, finish):
@@ -354,73 +200,6 @@ def _diff_string(start, finish):
                 fmt = '%02.0fs'
             return fmt % f
     diff = finish - start
-    print start
-    print finish
-    print diff.total_seconds()
     return float2time(diff.total_seconds())
-
-def log_info(build_id, pre_script = None, main_script = None):
-    if pre_script == None and main_script == None:
-        script_path = build_script_path(build_id)
-        if os.path.exists(script_path):
-            pre_script, main_script = json.load(open(script_path, 'r'))
-    with open(_build_log_path(build_id), 'r') as logfile:
-        log = logfile.read()
-        t = setup_cls().github_token
-        if isinstance(t, basestring) and len(t) > 0:
-            log = re.sub(t, '<token>', log)
-        status = {
-            'build_id': build_id, 
-            'term_error': True,
-            'finished': True,
-            'prelog': log,
-            'test_passed': None
-        }
-        try:
-            status['datetime'] = re.search(r'Starting build at (.*)', log).groups()[0]
-            finishes = re.findall(r'Build finished at (\d\d\d\d\d\d*_.*?),', log[-500:])
-            if len(finishes) > 0:
-                status['datetime_finish'] = finishes[-1]
-            if 'datetime_finish' in status and 'datetime' in status:
-                print status['datetime_finish']
-                status['time_taken'] = _diff_string(
-                    dt_from_str(status['datetime']), 
-                    dt_from_str(status['datetime_finish']))
-            try:
-                status.update(json.loads(log[:log.index(END_OF_BS)]))
-
-            except ValueError:
-                print 'error processing json build info from log %s' % build_id
-            prelog = log
-            mainlog = None
-            prefin = LOG_PRE_FINISHED in log
-            if prefin:
-                prelog, mainlog = prelog.split(LOG_PRE_FINISHED)
-                prelog += LOG_PRE_FINISHED
-            term_error = TERMINAL_ERROR in log
-            finished = LOG_FINISHED in log or term_error
-            processing_complete = CLEANED_UP in log or term_error
-            status['test_passed'] = TEST_ERROR not in log and finished and not term_error
-            status['prelog'] = prelog
-            status['mainlog'] = mainlog
-            status['term_error'] = term_error
-            status['finished'] = finished
-            status['processing_complete'] = processing_complete
-            status['pre_script'] = pre_script
-            status['main_script'] = main_script
-            # import pprint
-            # pprint.pprint(status)
-        except Exception:
-            traceback.print_exc()
-        return status
-
-def history():
-    logs = []
-    if os.path.exists(app.config['LOG_FILE']):
-        logs = ujson.load(open(app.config['LOG_FILE'], 'r'))
-    return logs
-
-def build_script_path(id):
-    return os.path.join('/tmp', id + '.script')
 
 

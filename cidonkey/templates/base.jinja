@@ -29,6 +29,9 @@
           </div>
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
+              <li>
+                <a href="#" id="build-master">Build Master</a>
+              </li>
               {% block main_menu %}
                 {% for url, name in main_menu %}
                 <li class="{#{% if item.active %}active{% endif %}#}"><a href="{{ url }}">{{ name }}</a></li>
@@ -64,6 +67,13 @@
     <script src={{ 'libs/js/bootstrap.min.js'|static }}></script>
     <script src={{ 'libs/js/bootbox.min.js'|static }}></script>
     <script src={{ 'libs/js/select2.min.js'|static }}></script>
+
+    <form id="submit-build-master" action="{{ url('do-build') }}" method="POST">{% csrf_token %}</form>
+    <script>
+      $('#build-master').click(function(){
+        $('#submit-build-master').submit();
+      });
+    </script>
     {% block extra_js %}
     {% endblock %}
   </body>

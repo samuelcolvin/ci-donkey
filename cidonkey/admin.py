@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Project, Build
+from .models import Project, BuildInfo
 
 
 class ProjectAdmin(admin.ModelAdmin):
@@ -9,9 +9,9 @@ class ProjectAdmin(admin.ModelAdmin):
 admin.site.register(Project, ProjectAdmin)
 
 
-class BuildAdmin(admin.ModelAdmin):
-    list_display = ('sha', 'start', 'complete', 'test_success', 'test_passed')
+class BuildInfoAdmin(admin.ModelAdmin):
+    list_display = ('project', 'sha', 'container', 'start', 'complete', 'test_success', 'test_passed')
 
 
-admin.site.register(Build, BuildAdmin)
+admin.site.register(BuildInfo, BuildInfoAdmin)
 
