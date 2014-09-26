@@ -2,6 +2,7 @@ from django.core.urlresolvers import reverse
 from django.db.models import FieldDoesNotExist
 from django.views.generic.list import ListView
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
 from .models import Build
 
@@ -21,6 +22,9 @@ def cid_context(request):
 
 
 class BuildList(ListView):
+    """
+    List of previous builds
+    """
     model = Build
     template_name = 'build_list.jinja'
     link_column = 'start'

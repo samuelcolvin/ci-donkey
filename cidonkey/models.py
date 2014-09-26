@@ -4,8 +4,8 @@ from django.db import models
 class Project(models.Model):
     name = models.CharField('name', max_length=100, unique=True)
     github_token = models.CharField('github token', max_length=50,
-                                    help_text='The token needs the "repo" scope to clone private repos. Used'
-                                              ' for cloning on private repos and for updating pull '
+                                    help_text='The token needs the "repo" scope to clone private repos. Used '
+                                              'for cloning on private repos and for updating pull '
                                               'request statuses on all repos.')
     private = models.BooleanField(default=True)
     github_url = models.URLField('github URL', null=True, help_text='This should be the https url for github.')

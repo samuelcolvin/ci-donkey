@@ -36,7 +36,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bootstrapform_jinja',
+    # 'bootstrapform_jinja',
     'django_jinja',
     'cidonkey'
 )
@@ -68,15 +68,12 @@ ROOT_URLCONF = 'urls'
 WSGI_APPLICATION = 'wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/1.7/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+DB_SQLITE3 = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 }
+
+DATABASES = {'default': DB_SQLITE3}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
@@ -103,3 +100,12 @@ DEFAULT_JINJA2_TEMPLATE_EXTENSION = '.jinja'
 JINJA2_ENVIRONMENT_OPTIONS = {
     'trim_blocks': True,
 }
+
+LOGIN_REDIRECT_URL = '/'
+
+def inspect_func(obj):
+    print obj
+    print dir(obj)
+    import pdb; pdb.set_trace()
+
+JINJA2_CONSTANTS = {'inspect': inspect_func}
