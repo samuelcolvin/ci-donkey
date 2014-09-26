@@ -63,13 +63,17 @@ class BuildProcess(object):
         return self.build_info
 
     def check_docker(self):
+        if self.build_info.complete:
+            return self.build_info
         try:
             status = cidocker.check_progress(self.build_info.container)
             if not status:
-                return
-            return_code, logs = status
-            self.build_info.test_passed = return_code == 0
+                return self.build_info
+            exit_code, finished, logs = status
+            self.build_info.test_passed = exit_code == 0
             self.build_info.main_log = logs
+            self.build_info.complete = True
+            self.build_info.finished = finished
 
             if self.build_info.test_passed:
                 self._update_status('success', 'CI Success')
@@ -80,8 +84,6 @@ class BuildProcess(object):
             self._log(traceback.format_exc())
             self._process_error()
         finally:
-            self.build_info.complete = True
-            self.build_info.finished = datetime.datetime.now()
             self.build_info.save()
         return self.build_info
 
@@ -128,19 +130,22 @@ class BuildProcess(object):
 
     def _download(self):
         self._log('cloning...')
-        commands = ['git clone %s %s' % (self.url, self.build_info.temp_dir)]
+        commands = 'git clone %s %s' % (self.url, self.build_info.temp_dir)
+        self._execute(commands)
         self._log('cloned code successfully')
         if self.build_info.fetch_cmd:
             self._log('fetching branch ' + self.build_info.fetch_cmd)
-            commands.append('git fetch origin ' + self.build_info.fetch_cmd)
+            commands = ['git fetch origin ' + self.build_info.fetch_cmd]
             if self.build_info.fetch_branch:
                 commands.append('git checkout ' + self.build_info.fetch_branch)
+            self._execute(commands)
         if self.build_info.sha:
             self._log('checkout out ' + self.build_info.sha)
-            commands.append('git checkout ' + self.build_info.sha)
-        self._execute(commands)
+            self._execute('git checkout ' + self.build_info.sha)
 
-    def _execute(self, commands, mute_stderr=False, mute_stdout=False):
+    def _execute(self, commands):
+        if isinstance(commands, basestring):
+            commands = [commands]
         for command in commands:
             if command.strip().startswith('#'):
                 self._log(command, 'SKIP> ')
@@ -156,11 +161,11 @@ class BuildProcess(object):
                                      stderr=subprocess.PIPE,
                                      env=cienv)
                 stdout, stderr = p.communicate()
-                if not mute_stdout:
+                if len(stdout) > 0:
                     self._log(stdout, '')
                 if p.returncode != 0:
                     raise common.CommandError(stderr)
-                elif not mute_stderr and len(stderr) > 0:
+                elif len(stderr) > 0:
                     self._log(stderr)
             except common.CommandError, e:
                 raise e
@@ -183,23 +188,6 @@ class BuildProcess(object):
         self.build_info.pre_log += message
 
     def _log(self, line, prefix='#> '):
-        self._message(prefix + line.strip('\n \t'))
-
-def _diff_string(start, finish):
-    def float2time(f):
-        if f is None: return ''
-        elif f >= 3600:
-            h = int(f / 3600)
-            return '%2d:%s' % (h, float2time(f % 3600))
-        elif f >= 60:
-            m = int(f / 60)
-            return '%02d:%s' % (m, float2time(f % 60))
-        else:
-            fmt = '%05.02f'
-            if round(f) == f:
-                fmt = '%02.0fs'
-            return fmt % f
-    diff = finish - start
-    return float2time(diff.total_seconds())
+        self._message(prefix + line.strip('\n\r \t'))
 
 

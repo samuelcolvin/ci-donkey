@@ -1,15 +1,14 @@
 {% extends 'base.jinja' %}
 
-{% import 'macros.jinja' as macros %}
 {% block content %}
 <div class="content">
   <h3>Build</h3>
   <p id="build-message">
     {% if build_status %}
-      <p>Test Status: {{ macros.display(build_status.success) }}</p>
-      <p>Test Passed: {{ macros.display(build_status.passed) }}</p>
-    {% else %}
-      building...
+      <p>Test Status: {{ build_status.success }}</p>
+      <p>Test Passed: {{ build_status.passed }}</p>
+{#    {% else %}#}
+{#      building...#}
     {% endif %}
     {% if log_extra %}
       {% if log_extra.author %}<p>Author: <strong>{{ log_extra.author }}</strong>{% endif %}
@@ -17,25 +16,15 @@
       {% if log_extra.display_url %}<p>Url: <a target="_blank" href="{{ log_extra.display_url }}">{{ log_extra.display_url }}</a>{% endif %}
     {% endif %}
   </p>
-  <div class="row">
-    <div class="col-md-6">
-      <h4>Pre Build Script</h4>
-      <pre id="pre-script" class="build-script">{{ pre_script }}</pre>
-    </div>
-    <div class="col-md-6">
-      <h4>CI Script</h4>
-      <pre id="main-script" class="build-script">{{ main_script }}</pre>
-    </div>
-  </div>
   <h4>Pre Build Setup</h4>
-  <pre id="pre-build" class="build-output">{{ pre_build_log }}</pre>
+  <pre id="pre-build" class="build-output">{{ object.pre_log }}</pre>
   <h4>CI Build &amp; Testing</h4>
-  <pre id="main-build" class="build-output">{{ main_build_log }}</pre>
+  <pre id="main-build" class="build-output">{{ object.main_log }}</pre>
 </div>
 {% endblock %}
 {% block extra_js %}
   <script>
     var pogress_url = '{{ pogress_url }}';
   </script>
-  <script src="{{ url_for('static', filename='js/build.js') }}?"></script>
+  <script src="{{ 'js/build.js'|static }}?"></script>
 {% endblock %}

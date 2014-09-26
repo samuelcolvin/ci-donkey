@@ -6,10 +6,12 @@ from django.db.models import FieldDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
+from django.views.generic import DetailView
 from django.views.generic.list import ListView
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import django.utils.formats as django_format
+from django.contrib.humanize.templatetags.humanize import naturaltime
 
 from .cid import ci
 from .models import BuildInfo, Project
@@ -36,7 +38,11 @@ class BuildList(ListView):
     model = BuildInfo
     template_name = 'build_list.jinja'
     link_column = 'start'
-    columns = ('start', 'time_taken', 'trigger', 'author', 'successful')
+    columns = ('start', 'time_taken', 'trigger', 'author', 'complete', 'successful')
+
+    def dispatch(self, request, *args, **kwargs):
+        check_all_builds()
+        return super(BuildList, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super(BuildList, self).get_context_data(**kwargs)
@@ -62,16 +68,32 @@ class BuildList(ListView):
         value = getattr(obj, attr_name)
         if hasattr(value, '__call__'):
             value = value()
+        if isinstance(value, datetime.datetime):
+            value = naturaltime(value)
         return value
 
 
 build_list = login_required(BuildList.as_view())
 
 
+class BuildDetails(DetailView):
+    """
+    details of a build.
+    """
+    model = BuildInfo
+    template_name = 'build.jinja'
+
+    def get_context_data(self, **kwargs):
+        self.object = ci.check(self.object)
+        return super(BuildDetails, self).get_context_data(**kwargs)
+
+build_details = login_required(BuildDetails.as_view())
+
+
 @login_required
 @require_POST
-def build(request):
-    build_info = BuildInfo.objects.create(trigger='manual', project=get_project())
+def do_build(request):
+    build_info = BuildInfo.objects.create(trigger='manual', author=request.user.username, project=get_project())
     ci.build(build_info)
     return redirect(reverse('build-list'))
 
@@ -94,10 +116,13 @@ def check_build(build_info):
     return {at: getattr(bi, at) for at in extract}
 
 
+def check_all_builds():
+    return [check_build(bi) for bi in BuildInfo.objects.filter(complete=False)]
+
+
 @login_required
-def check_all(request):
-    builds = [check_build(bi) for bi in BuildInfo.objects.filter(complete=False)]
-    print builds
+def check_builds(request):
+    builds = check_all_builds()
     response = {'check_count': len(builds), 'builds': builds}
     return HttpResponse(json.dumps(response, indent=2, cls=UniversalEncoder), content_type='application/json')
 

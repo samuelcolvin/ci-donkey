@@ -61,7 +61,7 @@ class BuildInfo(models.Model):
 
     pre_log = models.TextField('pre build log', null=True)
     main_log = models.TextField('main build log', null=True)
-    complete = models.BooleanField('processing complete', default=False)
+    complete = models.BooleanField('complete', default=False)
     test_success = models.BooleanField('test succeeded', default=True)
     test_passed = models.BooleanField('test passed', default=False)
     coverage = models.DecimalField(max_digits=5, decimal_places=2, null=True)
@@ -97,5 +97,6 @@ class BuildInfo(models.Model):
         return self.sha or 'unknown'
 
     class Meta:
+        ordering = ['-id']
         verbose_name = 'Build'
         verbose_name_plural = 'Builds'

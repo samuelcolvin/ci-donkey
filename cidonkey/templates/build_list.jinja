@@ -11,7 +11,7 @@
   {% elif v|string == 'show-spinner' %}
     <canvas class="spinner"></canvas>
   {% elif attr_name == link_column %}
-    <a href="{{ url('build-list') }}">{{ v }}</a>
+    <a href="{{ url('build-details', pk=obj.id) }}">{{ v }}</a>
   {% else %}
     {{ v }}
   {% endif %}
