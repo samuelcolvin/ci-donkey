@@ -37,8 +37,8 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.media',
     'django.core.context_processors.static',
     'django.core.context_processors.tz',
+    'cidonkey.views.cid_context',
     'django.contrib.messages.context_processors.messages',
-    'cidonkey.views.cid_context'
 )
 
 ROOT_URLCONF = 'urls'

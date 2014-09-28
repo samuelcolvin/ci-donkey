@@ -49,26 +49,20 @@
           </div>
         </div>
       </div>
-      {% if messages %}
-        <div class="alert alert-info alert-dismissible">
-          {% for message in messages %}
-            <p>{{ message }}</p>
-          {% endfor %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags or 'default' }} alert-dismissible">
+          <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span></button>
+          {{ message }}
         </div>
-      {% endif %}
-      {% block content %}
-      {% endblock %}
-
+      {% endfor %}
+      {% block content %}{% endblock %}
     </div>
     
 
     <script src={{ 'libs/js/jquery-1.11.0.min.js'|static }}></script>
-    <!-- <script src={{ 'libs/js/lodash.min.js'|static }}></script> -->
     <script src={{ 'libs/js/bootstrap.min.js'|static }}></script>
-    <script src={{ 'libs/js/bootbox.min.js'|static }}></script>
-    <script src={{ 'libs/js/select2.min.js'|static }}></script>
 
-    <form id="submit-build-master" action="{{ url('do-build') }}" method="POST">{% csrf_token %}</form>
+    <form id="submit-build-master" action="{{ url('go-build') }}" method="POST">{% csrf_token %}</form>
     <script>
       $('#build-master').click(function(){
         $('#submit-build-master').submit();

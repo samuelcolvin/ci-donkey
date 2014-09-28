@@ -1,11 +1,12 @@
 import decimal
 import json
 import datetime
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, resolve
 from django.db.models import FieldDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
+from django.views.generic.base import TemplateView
 from django.views.generic import DetailView
 from django.views.generic.list import ListView
 from django.contrib.auth.decorators import login_required
@@ -29,6 +30,26 @@ def cid_context(request):
             main_menu = []
         # TODO: add github url here
     return {'main_menu': main_menu, 'admin_access': request.user.is_staff, 'messages': []}
+
+
+class AjaxPage(TemplateView):
+    template_name = "ajax_page.jinja"
+    ajax_url = None
+
+    def dispatch(self, request, *args, **kwargs):
+        self.ajax_url = self.kwargs.pop('ajax_url')
+        return super(AjaxPage, self).dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super(AjaxPage, self).get_context_data(**kwargs)
+        ajax_url = reverse(self.ajax_url, args=self.args, kwargs=self.kwargs)
+        context['ajax_url'] = ajax_url
+        response = resolve(ajax_url).func(self.request, *self.args, **self.kwargs)
+        content = getattr(response, 'rendered_content') # , getattr(response, 'body', None)
+        context['initial_content'] = content
+        return context
+
+static_ajax_page = login_required(AjaxPage.as_view())
 
 
 class BuildList(ListView):
@@ -73,8 +94,7 @@ class BuildList(ListView):
         return value
 
 
-build_list = login_required(BuildList.as_view())
-
+build_list_ajax = login_required(BuildList.as_view())
 
 class BuildDetails(DetailView):
     """
@@ -87,14 +107,18 @@ class BuildDetails(DetailView):
         self.object = ci.check(self.object)
         return super(BuildDetails, self).get_context_data(**kwargs)
 
-build_details = login_required(BuildDetails.as_view())
+build_details_ajax = login_required(BuildDetails.as_view())
 
 
 @login_required
 @require_POST
-def do_build(request):
-    build_info = BuildInfo.objects.create(trigger='manual', author=request.user.username, project=get_project())
-    ci.build(build_info)
+def go_build(request):
+    project = get_project()
+    if project:
+        build_info = BuildInfo.objects.create(trigger='manual', author=request.user.username, project=project)
+        ci.build(build_info)
+    else:
+        messages.warning(request, 'No project created')
     return redirect(reverse('build-list'))
 
 

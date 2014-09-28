@@ -58,3 +58,12 @@ $(document).ready(function(){
     Spinner(this, 22);
   });
 });
+
+//$(document).ready(update_page);
+//
+//function update_page(){
+//  $.each($('[load-from]'), function(){
+//    var el = $(this);
+//    el.load(el.attr('load-from'))
+//  });
+//}
