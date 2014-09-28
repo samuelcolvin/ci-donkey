@@ -1,17 +1,19 @@
+{% import 'macros.jinja' as macros with context %}
+{{ macros.show_messages() }}
+
 <h3>Build</h3>
-<p id="build-message">
-  {% if build_status %}
-    <p>Test Status: {{ build_status.success }}</p>
-    <p>Test Passed: {{ build_status.passed }}</p>
-{#    {% else %}#}
-{#      building...#}
-  {% endif %}
-  {% if log_extra %}
-    {% if log_extra.author %}<p>Author: <strong>{{ log_extra.author }}</strong>{% endif %}
-    {% if log_extra.message %}<p>Message: <strong>{{ log_extra.message }}</strong>{% endif %}
-    {% if log_extra.display_url %}<p>Url: <a target="_blank" href="{{ log_extra.display_url }}">{{ log_extra.display_url }}</a>{% endif %}
-  {% endif %}
-</p>
+
+<div class="row">
+{% for attr_name in columns %}
+  <div class="col-md-6 detail-item">
+    <label>{{ get_verbose_name(attr_name) }}:</label>
+    <div class="one-line detail-info">
+      {{ macros.display(object, attr_name) }}
+    </div>
+  </div>
+{% endfor %}
+</div>
+
 <h4>Pre Build Setup</h4>
 <pre id="pre-build" class="build-output">{{ object.pre_log }}</pre>
 {% if object.main_log %}

@@ -10,7 +10,7 @@ admin.site.register(Project, ProjectAdmin)
 
 
 class BuildInfoAdmin(admin.ModelAdmin):
-    list_display = ('project', 'sha', 'container', 'start', 'complete', 'test_success', 'test_passed')
+    list_display = ('id', 'project', 'sha', 'container', 'start', 'complete', 'test_success', 'test_passed')
 
 
 admin.site.register(BuildInfo, BuildInfoAdmin)

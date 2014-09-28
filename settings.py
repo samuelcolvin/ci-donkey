@@ -78,6 +78,11 @@ JINJA2_ENVIRONMENT_OPTIONS = {
 
 LOGIN_REDIRECT_URL = '/'
 
+from django.contrib.messages import constants as messages
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+}
+
 # docker settings:
 
 PERSISTENCE_DIR = '/tmp/ci-persistence'

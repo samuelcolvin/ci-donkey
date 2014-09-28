@@ -1,21 +1,7 @@
-{% macro display(obj, attr_name) %}
-  {% set v = get_value(obj, attr_name) %}
-  {% if v|string == 'None' %}
-    <span class="none"></span>
-  {% elif v|string in ['True', 'False'] %}
-    <span class="glyphicon glyphicon-{{ 'ok' if v else 'remove' }}"></span>
-  {% elif 'glyphicon-' in v|string %}
-    <span class="glyphicon {{ v }}"></span>
-  {% elif v|string == 'show-spinner' %}
-    <canvas class="spinner"></canvas>
-  {% elif attr_name == link_column %}
-    <a href="{{ url('build-details', pk=obj.id) }}">{{ v }}</a>
-  {% else %}
-    {{ v }}
-  {% endif %}
-{% endmacro %}
-
+{% import 'macros.jinja' as macros with context %}
+{{ macros.show_messages() }}
 <h4>Build History</h4>
+
 {% if object_list %}
 <table class="sec history table table-bordered">
   <thead>
@@ -29,7 +15,7 @@
   {% for obj in object_list %}
     <tr>
     {% for attr_name in columns %}
-      <td>{{ display(obj, attr_name) }}</td>
+      <td>{{ macros.display(obj, attr_name) }}</td>
     {% endfor %}
     </tr>
   {% endfor %}

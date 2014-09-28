@@ -96,6 +96,46 @@ table.history td:nth-child(n+5) {
     color: red;
 }
 
+.build-output {
+    min-height: 300px;
+    overflow: auto;
+}
+
+#pre-build {
+    max-height: 400px;
+}
+
+.build-script {
+    height: 150px;
+    overflow: auto;
+}
+
+.spinner {
+    margin: -10px 0;
+    top: -5px;
+    width: 22px;
+    height: 22px;
+    position: relative;
+}
+
+.detail-item label {
+  float: left;
+  color: #9C9C9C;
+  font-weight: normal;
+  margin-right: 8px;
+  margin-bottom: 0px;
+}
+
+.detail-item .detail-info {
+  margin-left: 130px;
+}
+
+.detail-item .one-line {
+  white-space: nowrap;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 760px){
 
     .container {
@@ -113,24 +153,4 @@ table.history td:nth-child(n+5) {
     .content {
         padding: 0px 10px;
     }
-}
-
-.build-output {
-    min-height: 300px;
-    overflow: auto;
-}
-
-#pre-build {
-    max-height: 400px;
-}
-
-.build-script {
-    height: 150px;
-    overflow: auto;
-}
-
-#spinner {
-    margin: -10px 0;
-    top: -5px;
-    position: relative;
 }

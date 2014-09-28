@@ -1,13 +1,16 @@
 import subprocess
 import shlex
-from cidonkey.models import BuildInfo
+import time
+from django.utils import timezone
 import os
 import re
 import thread
 import traceback
 import tempfile
 import requests
-import datetime
+
+from cidonkey.models import BuildInfo
+
 from . import cidocker, github, common
 
 
@@ -52,6 +55,7 @@ class BuildProcess(object):
             self._set_svg('in_progress')
             self._download()
             self.build_info.container = cidocker.start_ci(self.project.docker_image, self.build_info.temp_dir)
+            self.build_info.docker_started = True
         except (common.KnownError, common.CommandError), e:
             self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
             self._process_error()
@@ -66,20 +70,23 @@ class BuildProcess(object):
         if self.build_info.complete:
             return self.build_info
         try:
-            status = cidocker.check_progress(self.build_info.container)
-            if not status:
-                return self.build_info
-            exit_code, finished, logs = status
-            self.build_info.test_passed = exit_code == 0
-            self.build_info.main_log = logs
-            self.build_info.complete = True
-            self.build_info.finished = finished
+            if self.build_info.docker_started:
+                status = cidocker.check_progress(self.build_info.container)
+                if not status:
+                    return self.build_info
+                exit_code, finished, logs = status
+                self.build_info.test_passed = exit_code == 0
+                self.build_info.main_log = logs
+                self.build_info.complete = True
+                self.build_info.finished = finished
 
             if self.build_info.test_passed:
                 self._update_status('success', 'CI Success')
             else:
                 self._update_status('failure', 'Tests failed')
             self._set_svg(self.build_info.test_passed)
+        except common.KnownError, e:
+            raise e
         except Exception, e:
             self._log(traceback.format_exc())
             self._process_error()
@@ -92,7 +99,7 @@ class BuildProcess(object):
         self._set_svg(False)
         self.build_info.test_success = False
         self.build_info.complete = True
-        self.build_info.finished = datetime.datetime.now()
+        self.build_info.finished = timezone.now()
 
     def _set_url(self):
         """
@@ -130,6 +137,7 @@ class BuildProcess(object):
 
     def _download(self):
         self._log('cloning...')
+        time.sleep(20)
         commands = 'git clone %s %s' % (self.url, self.build_info.temp_dir)
         self._execute(commands)
         self._log('cloned code successfully')
@@ -153,7 +161,7 @@ class BuildProcess(object):
             self._log(command, 'EXEC> ')
             cargs = shlex.split(command)
             try:
-                cienv = os.environ.copy()
+                cienv = {}# os.environ.copy()
                 cienv['CIDONKEY'] = '1'
                 p = subprocess.Popen(cargs,
                                      cwd=self.build_info.temp_dir,

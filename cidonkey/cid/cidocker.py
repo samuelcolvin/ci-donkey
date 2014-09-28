@@ -1,3 +1,4 @@
+from cidonkey.cid.common import KnownError
 from django.conf import settings
 import docker
 import io
