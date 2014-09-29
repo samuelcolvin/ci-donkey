@@ -1,6 +1,10 @@
 import datetime
+from django.core.servers.basehttp import FileWrapper
+import os
+import time
 from django.core.urlresolvers import reverse, resolve
 from django.db.models import FieldDoesNotExist
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 from django.views.generic.base import TemplateView
@@ -132,9 +136,31 @@ class BuildDetails(BuildMixin, DetailView):
         self.object = check(self.request, self.object)
         if self.object.complete:
             self.status = 202
+        self.object.pre_log = self.object.pre_log.replace(self.object.project.github_token, '<token>')
         return super(BuildDetails, self).get_context_data(**kwargs)
 
 build_details_ajax = login_required(BuildDetails.as_view())
+
+
+@require_POST
+def webhook(request):
+    project = get_project()
+    if not project:
+        return HttpResponse('no project created', status=403, content_type='text/plain')
+    time.sleep(0.5)
+    build_info = BuildInfo.objects.create(project=project)
+    response_code, build_info = cid.process_github_webhook(request, build_info)
+    if response_code == 202:
+        cid.build(build_info)
+        build_info = 'building started, id = %d' % build_info.id
+    return HttpResponse(build_info, status=response_code, content_type='text/plain')
+
+
+def status_svg(request):
+    project = get_project()
+    svg = project.status_svg if project else 'null.svg'
+    svg_path = os.path.join(os.path.dirname(__file__), 'static', svg)
+    return HttpResponse(FileWrapper(open(svg_path)), content_type='image/svg+xml')
 
 
 @login_required
@@ -142,7 +168,10 @@ build_details_ajax = login_required(BuildDetails.as_view())
 def go_build(request):
     project = get_project()
     if project:
-        build_info = BuildInfo.objects.create(trigger='manual', author=request.user.username, project=project)
+        build_info = BuildInfo.objects.create(trigger='manual',
+                                              author=request.user.username,
+                                              project=project,
+                                              on_master=True)
         cid.build(build_info)
     else:
         messages.warning(request, 'No project created')

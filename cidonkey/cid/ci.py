@@ -124,7 +124,7 @@ class BuildProcess(object):
             'context': 'ci-donkey',
             'target_url': target_url
         }
-        _, r = github.api(
+        _, r = github.github_api(
             url=self.build_info.status_url,
             token=self.token,
             method=requests.post,
@@ -189,6 +189,7 @@ class BuildProcess(object):
             status_svg = 'passing.svg' if status else 'failing.svg'
         self._log('setting status svg to %s' % status_svg)
         self.project.status_svg = status_svg
+        self.project.save()
 
     def _message(self, message):
         if not message.endswith('\n'):

@@ -1,6 +1,13 @@
 from django.db import models
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+import random
+import string
+
+
+def random_string(length=50):
+    rand = lambda: random.choice(string.lowercase + string.uppercase + string.digits)
+    return ''.join(rand() for _ in range(length))
 
 
 class Project(models.Model):
@@ -22,16 +29,26 @@ class Project(models.Model):
                                               'be written to stdout to start the main script.')
     docker_image = models.CharField('docker image', max_length=100, default='cidonkey',
                                     help_text='Name of the docker image to use for CI.')
+    default_branch = models.CharField('default branch', default='master', max_length=50)
+    allow_repeat = models.BooleanField('allow_repeats', default=False,
+                                       help_text='Allow repeat builds for the same sha.')
+    # TODO: this should be set to editable=False
+    webhook_secret = models.CharField('webhook secret', max_length=100, blank=True)
 
     SVG_NULL = 'null.svg'
     SVG_IN_PROGRESS = 'in_progress.svg'
     SVG_FAILING = 'failing.svg'
     SVG_PASSING = 'passing.svg'
     SVG_STATUSES = [(f, f) for f in (SVG_NULL, SVG_IN_PROGRESS, SVG_FAILING, SVG_PASSING)]
-    status_svg = models.CharField('status SVG', choices=SVG_STATUSES, default=SVG_NULL, editable=False, max_length=20)
+    status_svg = models.CharField('status SVG', choices=SVG_STATUSES, default=SVG_NULL, blank=True, max_length=20)
 
     def __unicode__(self):
         return self.name
+
+    def save(self, **kwargs):
+        if not self.webhook_secret:
+            self.webhook_secret = random_string()
+        return super(Project, self).save(**kwargs)
 
 
 def archive_dir(instance, filename):

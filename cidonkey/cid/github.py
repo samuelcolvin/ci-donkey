@@ -1,66 +1,58 @@
-from collections import OrderedDict
-import uuid
 import requests
 import json
 
-def process_request(request, cisetup):
+
+def process_github_webhook(request, build_info):
     """
     extracts the required data about the event from
     a request object resulting from a webhook request.
     """
-    info = OrderedDict([
-        ('trigger', 'unknown webhook'),
-        ('author', None),
-    ])
-    try:
-        rjson = request.get_json()
-        info['trigger'] =  request.headers.get('X-GitHub-Event')
-        if info['trigger'] not in cisetup.allowed_hooks:
-            return False, '"%s" is not an allowed webhook.' % info['trigger']
-        if info['trigger'] == 'push':
-            info['author'] = rjson['pusher']['name']
-            # TODO if head_commit = None return not building
-            info['message'] = rjson['head_commit']['message']
-            info['display_url'] = rjson['head_commit']['url']
-            info['private'] = rjson['repository']['private']
-            info['default_branch'] = rjson['repository']['default_branch']
-            info['sha'] = rjson['head_commit']['id']
-            info['label'] = rjson['ref']
-            info['status_url'] = rjson['repository']['statuses_url']\
-                    .replace('{sha}',info['sha'])
-            info['master'] = info['label'].endswith(info['default_branch'])
-        elif info['trigger'] == 'pull_request':
-            info['author'] = rjson['sender']['login']
-            info['message'] = rjson['pull_request']['title']
-            info['display_url'] = rjson['pull_request']['_links']['html']['href']
-            info['private'] = rjson['pull_request']['head']['repo']['private']
-            info['sha'] = rjson['pull_request']['head']['sha']
-            info['action'] = rjson['action']
-            if info['action'] == 'closed':
-                return False, 'not running ci when pull request is closed'
-            info['label'] = rjson['pull_request']['head']['label']
-            info['status_url'] = rjson['pull_request']['statuses_url']
-            info['fetch'] = 'pull/%(number)d/head:pr_%(number)d' % rjson
-            info['fetch_branch'] = 'pr_%(number)d' % rjson
-            info['master'] = False
-        statues, _ = api(info['status_url'], cisetup.github_token)
-        if len(statues) > 0:
-            return False, 'not running ci, status already exists for this commit'
-    except Exception, e:
-        print 'Exception getting hook details: %r' % e
-        try:
-            requestinfo = str(request.headers)
-            requestinfo += 'Error: %r\n' % e
-            requestinfo += '\n' + str(rjson)
-            fn = '/tmp/%s.log' % uuid.uuid4()
-            open(fn, 'w').write(requestinfo)
-            print 'data saved to %s' % fn
-        except Exception:
-            pass
-        return False, e
-    return True, info
+    rjson = request.get_json()
+    secret = request.headers.get('X-Hub-Signature')
+    if secret != build_info.project.webhook_secret:
+        return 403, 'permission denied'
+    build_info.trigger = request.headers.get('X-GitHub-Event')
+    private = None
+    if build_info.trigger not in build_info.project.webhooks:
+        return False, '"%s" is not an allowed webhook.' % build_info.trigger
+    if build_info.trigger == 'push':
+        build_info.author = rjson['pusher']['name']
+        # TODO if head_commit = None return not building
+        build_info.commit_message = rjson['head_commit']['message']
+        build_info.display_url = rjson['head_commit']['url']
+        default_branch = rjson['repository']['default_branch']
+        build_info.sha = rjson['head_commit']['id']
+        build_info.label = rjson['ref']
+        build_info.status_url = rjson['repository']['statuses_url']\
+                .replace('{sha}',build_info.sha)
+        build_info.on_master = build_info.label.endswith(default_branch)
+        private = rjson['repository']['private']
+    elif build_info.trigger == 'pull_request':
+        build_info.author = rjson['sender']['login']
+        build_info.commit_message = rjson['pull_request']['title']
+        build_info.display_url = rjson['pull_request']['_links']['html']['href']
+        private = rjson['pull_request']['head']['repo']['private']
+        build_info.sha = rjson['pull_request']['head']['sha']
+        build_info.action = rjson['action']
+        if build_info.action == 'closed':
+            return 200, 'not running ci when pull request is closed'
+        build_info.label = rjson['pull_request']['head']['label']
+        build_info.status_url = rjson['pull_request']['statuses_url']
+        build_info.fetch_cmd = 'pull/%(number)d/head:pr_%(number)d' % rjson
+        build_info.fetch_branch = 'pr_%(number)d' % rjson
+        build_info.on_master = False
+    if build_info.project.private != private:
+        print 'changing project private status to %r' % private
+        build_info.project.private = private
+        build_info.project.save()
+    statues, _ = github_api(build_info.status_url, build_info.project.github_token)
+    if len(statues) > 0 and not build_info.project.allow_repeat:
+        return 200, 'not running ci, status already exists for this commit'
+    build_info.save()
+    return 202, build_info
 
-def api(url, token, method=requests.get, data=None):
+
+def github_api(url, token, method=requests.get, data=None):
     headers = {'Authorization': 'token %s' % token}
     payload = None
     if data:
