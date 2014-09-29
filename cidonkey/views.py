@@ -150,14 +150,14 @@ build_details_ajax = login_required(BuildDetails.as_view())
 def webhook(request, pk):
     project = get_project(pk)
     if not project:
-        return HttpResponse('no project created', status=403, content_type='text/plain')
+        return HttpResponse('no project created', status=403)
     time.sleep(0.5)
     build_info = BuildInfo.objects.create(project=project)
     response_code, build_info = cid.process_github_webhook(request, build_info)
     if response_code == 202:
         cid.build(build_info, get_site(request))
         build_info = 'building started, id = %d' % build_info.id
-    return HttpResponse(str(build_info), status=response_code, content_type='text/plain')
+    return HttpResponse(str(build_info), status=response_code)
 
 
 def status_svg(request, pk):
