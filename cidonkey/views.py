@@ -103,7 +103,7 @@ class BuildList(BuildMixin, ListView):
     model = BuildInfo
     template_name = 'build_list.jinja'
     link_column = 'start'
-    columns = ('start', 'time_taken', 'trigger', 'author', 'successful')
+    columns = ('start', 'time_taken', 'trigger', 'label', 'author', 'successful')
 
     def dispatch(self, request, *args, **kwargs):
         if not any_active_builds(self.request):
@@ -161,7 +161,6 @@ def webhook(request, pk):
     else:
         build_info.delete()
         msg = str(info)
-    print build_info
     return HttpResponse(msg, status=response_code)
 
 
