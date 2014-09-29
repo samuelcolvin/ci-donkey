@@ -9,14 +9,14 @@ def process_github_webhook(request, build_info):
     extracts the required data about the event from
     a request object resulting from a webhook request.
     """
+    headers = request.META
+    if not _validate_signature(request.body, headers, build_info.project.webhook_secret):
+        return 403, 'permission denied'
     try:
         rjson = json.loads(request.body)
     except ValueError, e:
         return 400, 'Error parsing JSON: %s' % str(e)
-    headers = request.META
-    if not _validate_signature(request.body, headers, build_info.project.webhook_secret):
-        return 403, 'permission denied'
-    build_info.trigger = headers.get('HTTP_X_GITHUB_EVENT')
+    build_info.trigger = headers.get('HTTP_X_GITHUB_EVENT', 'unknown')
     private = None
     if build_info.trigger not in build_info.project.webhooks:
         return False, '"%s" is not an allowed webhook.' % build_info.trigger
@@ -65,7 +65,6 @@ def _validate_signature(data, headers, secret):
     if sha_name != 'sha1':
         return False
     mac = hmac.new(str(secret), msg=str(data), digestmod=hashlib.sha1)
-    print 'mac.hexidgest:', mac.hexdigest()
     return mac.hexdigest() == signature
 
 
