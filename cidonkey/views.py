@@ -189,7 +189,7 @@ def go_build(request):
 
 def check(request, build_info):
     try:
-        bi = cid.check(build_info)
+        bi = cid.check(build_info, get_site(request))
     except cid.KnownError, e:
         messages.error(request, str(e))
         bi = build_info

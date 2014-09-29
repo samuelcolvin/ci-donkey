@@ -20,13 +20,13 @@ def build(bi, update_url):
     thread.start_new_thread(b.start_build, ())
 
 
-def check(bi):
-    b = BuildProcess(bi)
+def check(bi, update_url):
+    b = BuildProcess(bi, update_url)
     return b.check_docker()
 
 
 class BuildProcess(object):
-    def __init__(self, build_info, update_url=None):
+    def __init__(self, build_info, update_url='unknown'):
         assert isinstance(build_info, BuildInfo), 'build_info must be an instance of BuildInfo, not %s' % \
                                                   build_info.__class__.__name__
         self.update_url = update_url
