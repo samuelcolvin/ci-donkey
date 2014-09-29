@@ -50,6 +50,7 @@ class BuildProcess(object):
             self._set_svg('in_progress')
             self._download()
             self._zip_repo()
+            self._log('STARTING DOCKER:')
             self.build_info.container = cidocker.start_ci(self.project.docker_image, self.build_info.temp_dir)
             self.build_info.docker_started = True
         except (common.KnownError, common.CommandError), e:
@@ -75,11 +76,12 @@ class BuildProcess(object):
             self.build_info.test_success = self.build_info.project.script_split in logs
             if self.build_info.test_success:
                 self.build_info.test_passed = exit_code == 0
-                split_index = logs.index(self.build_info.project.script_split)
-                self.build_info.process_log += '\n' + logs[:split_index]
-                self.build_info.ci_log = logs[split_index:]
+                process_log, ci_log = logs.split(self.build_info.project.script_split, 1)
+                self.build_info.process_log += '\n' + process_log
+                self.build_info.ci_log = ci_log
             else:
                 self.build_info.process_log += '\n' + logs
+            self._log('DOCKER FINISHED:')
             self.build_info.complete = True
             self.build_info.finished = finished
 
