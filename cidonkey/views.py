@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.servers.basehttp import FileWrapper
 from django.views.decorators.csrf import csrf_exempt
@@ -18,6 +19,7 @@ from django.contrib.humanize.templatetags.humanize import naturaltime
 
 from . import cid
 from .models import BuildInfo, Project
+import pytz
 
 
 def cid_context(request):
@@ -139,8 +141,9 @@ class BuildDetails(BuildMixin, DetailView):
         self.object = check(self.request, self.object)
         if self.object.complete:
             self.status = 202
-	if self.object.process_log:
-	    self.object.process_log = self.object.process_log.replace(self.object.project.github_token, '<github token>')
+        if self.object.process_log:
+            self.object.process_log = self.object.process_log.replace(self.object.project.github_token,
+                                                                      '<github token>')
         return super(BuildDetails, self).get_context_data(**kwargs)
 
 build_details_ajax = login_required(BuildDetails.as_view())
@@ -168,7 +171,11 @@ def status_svg(request, pk):
     project = get_project(pk)
     svg = project.status_svg if project else 'null.svg'
     svg_path = os.path.join(os.path.dirname(__file__), 'static', svg)
-    return HttpResponse(FileWrapper(open(svg_path)), content_type='image/svg+xml')
+    response = HttpResponse(FileWrapper(open(svg_path)), content_type='image/svg+xml')
+    response['Etag'] = '"%s"' % uuid.uuid4()
+    response['Cache-Control'] = 'no-cache'
+    response['Expires'] = datetime.datetime.now().replace(tzinfo=pytz.UTC).strftime('%a, %d %b %Y %H:%M:%S %Z')
+    return response
 
 
 @login_required
