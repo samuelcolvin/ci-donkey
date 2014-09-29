@@ -60,7 +60,7 @@ DB_POSTGRES = {
     'CONN_MAX_AGE': None
 }
 
-DATABASES = {'default': DB_SQLITE3}
+DATABASES = {'default': DB_POSTGRES}
 
 LANGUAGE_CODE = 'en-gb'
 
