@@ -1,6 +1,7 @@
 import datetime
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.servers.basehttp import FileWrapper
+from django.views.decorators.csrf import csrf_exempt
 import os
 import time
 from django.core.urlresolvers import reverse, resolve
@@ -144,6 +145,7 @@ class BuildDetails(BuildMixin, DetailView):
 build_details_ajax = login_required(BuildDetails.as_view())
 
 
+@csrf_exempt
 @require_POST
 def webhook(request, pk):
     project = get_project(pk)
@@ -155,7 +157,7 @@ def webhook(request, pk):
     if response_code == 202:
         cid.build(build_info, get_site(request))
         build_info = 'building started, id = %d' % build_info.id
-    return HttpResponse(build_info, status=response_code, content_type='text/plain')
+    return HttpResponse(str(build_info), status=response_code, content_type='text/plain')
 
 
 def status_svg(request, pk):

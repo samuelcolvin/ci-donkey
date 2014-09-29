@@ -10,7 +10,7 @@ urlpatterns = patterns('',
 
     url(r'^build/manual/$', 'cidonkey.views.go_build', name='go-build'),
 
-    url(r'^project/(?P<pk>\d+)/webhook/$', 'cidonkey.views.webhook', name='webhook'),
+    url(r'^project/(?P<pk>\d+)/webhook$', 'cidonkey.views.webhook', name='webhook'),
     url(r'^project/(?P<pk>\d+)/status.svg$', 'cidonkey.views.status_svg', name='status-svg'),
 
     url(r'^accounts/login/$', 'django.contrib.auth.views.login', {'template_name': 'login.jinja'}),
