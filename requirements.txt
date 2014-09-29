@@ -16,5 +16,6 @@ requests==2.4.1
 six==1.8.0
 slimit==0.8.1
 termcolor==1.1.0
+uWSGI==2.0.7
 websocket-client==0.18.0
 wsgiref==0.1.2
