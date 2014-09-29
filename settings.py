@@ -96,3 +96,5 @@ MESSAGE_TAGS = {
 # docker settings:
 
 PERSISTENCE_DIR = '/tmp/ci-persistence'
+# whether or not to update commits' on github
+SET_STATUS = True

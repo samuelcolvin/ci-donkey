@@ -1,5 +1,6 @@
 import subprocess
 import shlex
+from django.conf import settings
 from django.core.files import File
 from django.utils import timezone
 import re
@@ -110,7 +111,7 @@ class BuildProcess(object):
 
     def _update_status(self, status, message):
         assert status in ['pending', 'success', 'error', 'failure']
-        if not self.build_info.status_url:
+        if not self.build_info.status_url or not settings.SET_STATUS:
             return
         if not self.valid_token:
             self._log('WARNING: no valid token found, cannot update status of pull request')
