@@ -7,7 +7,7 @@ def process_github_webhook(request, build_info):
     extracts the required data about the event from
     a request object resulting from a webhook request.
     """
-    rjson = request.get_json()
+    rjson = json.loads(request.raw_post_data)
     secret = request.headers.get('X-Hub-Signature')
     if secret != build_info.project.webhook_secret:
         return 403, 'permission denied'
