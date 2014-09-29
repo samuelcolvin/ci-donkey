@@ -1,10 +1,11 @@
 import datetime
 import uuid
+import pytz
+import os
+import time
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.servers.basehttp import FileWrapper
 from django.views.decorators.csrf import csrf_exempt
-import os
-import time
 from django.core.urlresolvers import reverse, resolve
 from django.db.models import FieldDoesNotExist
 from django.http import HttpResponse
@@ -19,7 +20,6 @@ from django.contrib.humanize.templatetags.humanize import naturaltime
 
 from . import cid
 from .models import BuildInfo, Project
-import pytz
 
 
 def cid_context(request):
