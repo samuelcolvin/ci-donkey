@@ -23,7 +23,8 @@ def process_github_webhook(request, build_info):
         return False, '"%s" is not an allowed webhook.' % build_info.trigger
     if build_info.trigger == 'push':
         build_info.author = rjson['pusher']['name']
-        # TODO if head_commit = None return not building
+        if rjson['head_commit'] is None:
+            return 200, 'head_commit null, not building'
         build_info.commit_message = rjson['head_commit']['message']
         build_info.display_url = rjson['head_commit']['url']
         build_info.sha = rjson['head_commit']['id']
