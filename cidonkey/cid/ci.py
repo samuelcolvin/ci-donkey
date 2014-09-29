@@ -118,7 +118,7 @@ class BuildProcess(object):
         payload = {
             'state': status,
             'description': message,
-            'context': 'ci-donkey',
+            'context': common.UPDATE_CONTEXT,
             'target_url': self.update_url + str(self.build_info.id)
         }
         _, r = github.github_api(

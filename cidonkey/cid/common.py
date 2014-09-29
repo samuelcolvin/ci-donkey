@@ -4,3 +4,5 @@ class KnownError(Exception):
 
 class CommandError(Exception):
     pass
+
+UPDATE_CONTEXT = 'ci-donkey'

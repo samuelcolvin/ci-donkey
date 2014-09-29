@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from cidonkey.cid import UPDATE_CONTEXT
 import requests
 import json
 
@@ -51,6 +52,7 @@ def process_github_webhook(request, build_info):
         build_info.project.private = private
         build_info.project.save()
     statues, _ = github_api(build_info.status_url, build_info.project.github_token)
+    statues = [s for s in statues if s.get('context', '') == UPDATE_CONTEXT]
     if len(statues) > 0 and not build_info.project.allow_repeat:
         return 200, 'not running ci, status already exists for this commit'
     build_info.save()
