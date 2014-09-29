@@ -3,7 +3,7 @@ from .models import Project, BuildInfo
 
 
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('name', 'github_url', 'ci_script')
+    list_display = ('github_repo', 'github_user', 'ci_script')
 
 
 admin.site.register(Project, ProjectAdmin)

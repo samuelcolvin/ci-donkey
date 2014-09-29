@@ -1,4 +1,5 @@
 import datetime
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.servers.basehttp import FileWrapper
 import os
 import time
@@ -111,6 +112,7 @@ class BuildList(BuildMixin, ListView):
 
 build_list_ajax = login_required(BuildList.as_view())
 
+
 class BuildDetails(BuildMixin, DetailView):
     """
     details of a build.
@@ -136,28 +138,28 @@ class BuildDetails(BuildMixin, DetailView):
         self.object = check(self.request, self.object)
         if self.object.complete:
             self.status = 202
-        self.object.pre_log = self.object.pre_log.replace(self.object.project.github_token, '<token>')
+        self.object.process_log = self.object.process_log.replace(self.object.project.github_token, '<github token>')
         return super(BuildDetails, self).get_context_data(**kwargs)
 
 build_details_ajax = login_required(BuildDetails.as_view())
 
 
 @require_POST
-def webhook(request):
-    project = get_project()
+def webhook(request, pk):
+    project = get_project(pk)
     if not project:
         return HttpResponse('no project created', status=403, content_type='text/plain')
     time.sleep(0.5)
     build_info = BuildInfo.objects.create(project=project)
     response_code, build_info = cid.process_github_webhook(request, build_info)
     if response_code == 202:
-        cid.build(build_info)
+        cid.build(build_info, get_site(request))
         build_info = 'building started, id = %d' % build_info.id
     return HttpResponse(build_info, status=response_code, content_type='text/plain')
 
 
-def status_svg(request):
-    project = get_project()
+def status_svg(request, pk):
+    project = get_project(pk)
     svg = project.status_svg if project else 'null.svg'
     svg_path = os.path.join(os.path.dirname(__file__), 'static', svg)
     return HttpResponse(FileWrapper(open(svg_path)), content_type='image/svg+xml')
@@ -172,7 +174,7 @@ def go_build(request):
                                               author=request.user.username,
                                               project=project,
                                               on_master=True)
-        cid.build(build_info)
+        cid.build(build_info, get_site(request))
     else:
         messages.warning(request, 'No project created')
     return redirect(reverse('build-list'))
@@ -182,8 +184,6 @@ def check(request, build_info):
     try:
         bi = cid.check(build_info)
     except cid.KnownError, e:
-        # errors = [m for m in messages.get_messages(request) if m.level == messages.ERROR]
-        # if len(errors) == 0:
         messages.error(request, str(e))
         bi = build_info
     finally:
@@ -191,7 +191,7 @@ def check(request, build_info):
 
 
 def check_build(request, build_info):
-    extract = ['sha', 'complete', 'test_success', 'test_passed', 'start', 'finished', 'pre_log', 'main_log']
+    extract = ['sha', 'complete', 'test_success', 'test_passed', 'start', 'finished', 'process_log', 'ci_log']
     bi = check(request, build_info)
     return {at: getattr(bi, at) for at in extract}
 
@@ -200,8 +200,16 @@ def any_active_builds(r):
     return any([not check_build(r, bi)['complete'] for bi in BuildInfo.objects.filter(complete=False)])
 
 
-def get_project():
+def get_site(request):
+    current_site = get_current_site(request)
+    return 'http://' + current_site.domain + '/'
+
+
+def get_project(pk=None):
     """
     gets the first project, stop gap until we support more than one project
     """
-    return Project.objects.first()
+    projects = Project.objects.all()
+    if pk is not None:
+        projects = projects.filter(pk=pk)
+    return projects.first()

@@ -50,6 +50,16 @@ DB_SQLITE3 = {
     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 }
 
+DB_POSTGRES = {
+    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'NAME': 'cidonkey',
+    'USER': 'postgres',
+    'PASSWORD': 'cidonkey',
+    'HOST': 'localhost',
+    'PORT': '',
+    'CONN_MAX_AGE': None
+}
+
 DATABASES = {'default': DB_SQLITE3}
 
 LANGUAGE_CODE = 'en-gb'

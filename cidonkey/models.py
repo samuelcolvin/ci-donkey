@@ -1,8 +1,10 @@
+import uuid
+import datetime
+import random
+import string
 from django.db import models
 from django.utils import timezone
 from django.utils.safestring import mark_safe
-import random
-import string
 
 
 def random_string(length=50):
@@ -11,16 +13,15 @@ def random_string(length=50):
 
 
 class Project(models.Model):
-    name = models.CharField('name', max_length=100, unique=True)
+    github_user = models.CharField('github username', max_length=100, help_text='github user or organisation name')
+    github_repo = models.CharField('github repo', max_length=100, help_text='github repo name')
     github_token = models.CharField('github token', max_length=50,
                                     help_text='The token needs the "repo" scope to clone private repos. Used '
                                               'for cloning on private repos and for updating pull '
                                               'request statuses on all repos.')
     private = models.BooleanField(default=True)
-    github_url = models.URLField('github URL', null=True, help_text='This should be the https url for github.')
-    ci_url = models.URLField('CI URL', help_text='URL of this site, used for "datails" on commit statuses.')
     webhooks = models.CharField(max_length=100, default='push, pull_request',
-                                help_text='Comma seperated list of webooks to accept from github, see here '
+                                help_text='Comma separated list of wehbooks to accept from github, see here '
                                           'for details.Normally push and pull_request will suffice.')
     ci_script = models.CharField('CI script path', max_length=200, default='ci-donkey.sh',
                                  help_text='path inside repo to script which is executed to perform CI.')
@@ -43,7 +44,7 @@ class Project(models.Model):
     status_svg = models.CharField('status SVG', choices=SVG_STATUSES, default=SVG_NULL, blank=True, max_length=20)
 
     def __unicode__(self):
-        return self.name
+        return '%s/%s' % (self.github_user, self.github_repo)
 
     def save(self, **kwargs):
         if not self.webhook_secret:
@@ -52,7 +53,9 @@ class Project(models.Model):
 
 
 def archive_dir(instance, filename):
-    return '%s.zip' % instance.sha
+    name = instance.sha if instance.sha else str(uuid.uuid4())
+    stamp = datetime.datetime.now().strftime('%a_%d-%b-%Y_%H-%M-%S')
+    return '%s_%s.zip' % (stamp, name)
 
 
 class BuildInfo(models.Model):
@@ -78,8 +81,8 @@ class BuildInfo(models.Model):
     container = models.CharField('container ID', max_length=100, null=True, blank=True)
     temp_dir = models.CharField('temporary directory', max_length=100, null=True, blank=True)
 
-    pre_log = models.TextField('pre build log', null=True, blank=True)
-    main_log = models.TextField('main build log', null=True, blank=True)
+    process_log = models.TextField('process log', null=True, blank=True)
+    ci_log = models.TextField('ci log', null=True, blank=True)
     docker_started = models.BooleanField('docker started', default=False)
     complete = models.BooleanField('complete', default=False)
     test_success = models.BooleanField('test succeeded', default=True)
@@ -115,6 +118,10 @@ class BuildInfo(models.Model):
     time_taken.short_description = 'time taken'
 
     def commit_url(self):
+        if not self.commit_message:
+            return ''
+        if not self.display_url:
+            return self.commit_message
         return mark_safe('<a href="%s">%s</a>' % (self.display_url, self.commit_message))
     commit_url.short_description = 'commit'
 

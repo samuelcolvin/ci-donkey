@@ -14,9 +14,9 @@
 {% endfor %}
 </div>
 
-<h4>Pre Build Setup</h4>
-<pre id="pre-build" class="build-output">{{ object.pre_log }}</pre>
-{% if object.main_log %}
+<h4>Process Log</h4>
+<pre id="pre-build" class="build-output">{{ object.process_log }}</pre>
+{% if object.ci_log %}
 <h4>CI Build &amp; Testing</h4>
-<pre id="main-build" class="build-output">{{ object.main_log }}</pre>
+<pre id="main-build" class="build-output">{{ object.ci_log }}</pre>
 {% endif %}
