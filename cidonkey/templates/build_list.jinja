@@ -1,0 +1,26 @@
+{% import 'macros.jinja' as macros with context %}
+{{ macros.show_messages() }}
+<h4>Build History</h4>
+
+{% if object_list %}
+<table class="sec history table table-bordered">
+  <thead>
+    <tr>
+    {% for head in headings %}
+      <th>{{ head }}</th>
+    {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for obj in object_list %}
+    <tr>
+    {% for attr_name in columns %}
+      <td>{{ macros.display(obj, attr_name) }}</td>
+    {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No previous builds.</p>
+{% endif %}

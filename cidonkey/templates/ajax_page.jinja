@@ -1,0 +1,11 @@
+{% extends 'base.jinja' %}
+
+{% block content %}
+<div class="content"{% if ajax_url %} load-from="{{ ajax_url }}"{% endif %}>
+  {{ initial_content|safe }}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{{ 'js/page.js'|static }}"></script>
+{% endblock %}

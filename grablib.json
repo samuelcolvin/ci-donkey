@@ -1,5 +1,5 @@
 {
-  "libs_root": "cid/static/libs",
+  "libs_root": "cidonkey/static/libs",
   "sites":
   {
     "github": "https://raw.githubusercontent.com",

@@ -1,0 +1,22 @@
+{% import 'macros.jinja' as macros with context %}
+{{ macros.show_messages() }}
+
+<h3>Build</h3>
+
+<div class="row">
+{% for attr_name in columns %}
+  <div class="col-md-6 detail-item">
+    <label>{{ get_verbose_name(attr_name) }}:</label>
+    <div class="one-line detail-info">
+      {{ macros.display(object, attr_name) }}
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+<h4>Process Log</h4>
+<pre id="pre-build" class="build-output">{{ object.process_log }}</pre>
+{% if object.ci_log %}
+<h4>CI Build &amp; Testing</h4>
+<pre id="main-build" class="build-output">{{ object.ci_log }}</pre>
+{% endif %}
