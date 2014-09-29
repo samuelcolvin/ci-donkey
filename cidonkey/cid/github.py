@@ -26,12 +26,11 @@ def process_github_webhook(request, build_info):
         # TODO if head_commit = None return not building
         build_info.commit_message = rjson['head_commit']['message']
         build_info.display_url = rjson['head_commit']['url']
-        default_branch = rjson['repository']['default_branch']
         build_info.sha = rjson['head_commit']['id']
         build_info.label = rjson['ref']
-        build_info.status_url = rjson['repository']['statuses_url']\
-                .replace('{sha}',build_info.sha)
-        build_info.on_master = build_info.label.endswith(default_branch)
+        build_info.status_url = rjson['repository']['statuses_url'].replace('{sha}', build_info.sha)
+        default_branch = rjson['repository']['default_branch']
+        build_info.on_master = build_info.label.split('/')[-1] == default_branch
         private = rjson['repository']['private']
     elif build_info.trigger == 'pull_request':
         build_info.author = rjson['sender']['login']
@@ -43,6 +42,8 @@ def process_github_webhook(request, build_info):
         if build_info.action == 'closed':
             return 200, 'not running ci when pull request is closed'
         build_info.label = rjson['pull_request']['head']['label']
+        if build_info.label.split(':')[0] == build_info.project.github_user:
+            return 200, 'not running ci for local pull request, should be triggered by push'
         build_info.status_url = rjson['pull_request']['statuses_url']
         build_info.fetch_cmd = 'pull/%(number)d/head:pr_%(number)d' % rjson
         build_info.fetch_branch = 'pr_%(number)d' % rjson
