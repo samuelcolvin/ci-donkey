@@ -60,4 +60,5 @@ env
 ci-donkey-test/
 localsettings.py
 reload.wsgi
-
+mediafiles/
+staticfiles/
