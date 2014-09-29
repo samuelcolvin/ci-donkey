@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import requests
 import json
 
@@ -12,8 +14,7 @@ def process_github_webhook(request, build_info):
     except ValueError, e:
         return 400, 'Error parsing JSON: %s' % str(e)
     headers = request.META
-    secret = headers.get('X-Hub-Signature')
-    if secret != build_info.project.webhook_secret:
+    if not _validate_signature(request.body, headers, build_info.project.webhook_secret):
         return 403, 'permission denied'
     build_info.trigger = headers.get('X-GitHub-Event')
     private = None
@@ -54,6 +55,17 @@ def process_github_webhook(request, build_info):
         return 200, 'not running ci, status already exists for this commit'
     build_info.save()
     return 202, build_info
+
+
+def _validate_signature(data, headers, secret):
+    if not 'X-Hub-Signature' in headers:
+        return False
+    sha_name, signature = headers['X-Hub-Signature'].split('=')
+    if sha_name != 'sha1':
+        return False
+
+    mac = hmac.new(secret, msg=data, digestmod=hashlib.sha1)
+    return hmac.compare_digest(mac.hexdigest(), signature)
 
 
 def github_api(url, token, method=requests.get, data=None):
