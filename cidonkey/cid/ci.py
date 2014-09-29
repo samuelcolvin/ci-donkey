@@ -3,7 +3,6 @@ import shlex
 from django.conf import settings
 from django.core.files import File
 from django.utils import timezone
-import re
 import thread
 import traceback
 import tempfile
@@ -73,8 +72,14 @@ class BuildProcess(object):
             if not status:
                 return self.build_info
             exit_code, finished, logs = status
-            self.build_info.test_passed = exit_code == 0
-            self.build_info.ci_log = logs
+            self.build_info.test_success = self.build_info.project.script_split in logs
+            if self.build_info.test_success:
+                self.build_info.test_passed = exit_code == 0
+                split_index = logs.index(self.build_info.project.script_split)
+                self.build_info.process_log += '\n' + logs[:split_index]
+                self.build_info.ci_log = logs[split_index:]
+            else:
+                self.build_info.process_log += '\n' + logs
             self.build_info.complete = True
             self.build_info.finished = finished
 
@@ -192,7 +197,6 @@ class BuildProcess(object):
                 raise common.KnownError('%s: %s' % (e.__class__.__name__, str(e)))
 
     def _set_svg(self, status):
-        print 'set_svg', self.badge_updates, status
         if not self.badge_updates:
             return
         if status == 'in_progress':

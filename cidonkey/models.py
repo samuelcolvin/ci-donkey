@@ -98,6 +98,12 @@ class BuildInfo(models.Model):
     successful.short_description = 'successful'
 
     def time_taken(self):
+        fin = self.finished if self.complete else timezone.now()
+        if not fin:
+            return ''
+        diff = fin - self.start
+        total_seconds = diff.total_seconds()
+
         def float2time(f):
             if f is None:
                 return ''
@@ -108,13 +114,11 @@ class BuildInfo(models.Model):
                 m = int(f / 60)
                 return '%02d:%s' % (m, float2time(f % 60))
             else:
-                fmt = '%0.0fs' if f > 2 else '%0.2fs'
+                # should not show fractions for 1min 1 sec
+                fmt = '%02.0fs' if total_seconds > 2 else '%05.02fs'
                 return fmt % f
-        fin = self.finished if self.complete else timezone.now()
-        if not fin:
-            return ''
-        diff = fin - self.start
-        return float2time(diff.total_seconds())
+
+        return float2time(total_seconds)
     time_taken.short_description = 'time taken'
 
     def commit_url(self):
