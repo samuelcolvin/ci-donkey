@@ -4,7 +4,7 @@ BASE_DIR = os.path.dirname(__file__)
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'ck@y+(qt4(6a+ev(5%ytz_yd96(#rql79!$2=7j6=#i7viu#=&'
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ALLOWED_HOSTS = []
@@ -45,22 +45,11 @@ ROOT_URLCONF = 'urls'
 
 WSGI_APPLICATION = 'wsgi.application'
 
-DB_SQLITE3 = {
+# override the DATABASE in localsettings.py to use something more powerful
+DATABASES = {'default': {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-}
-
-DB_POSTGRES = {
-    'ENGINE': 'django.db.backends.postgresql_psycopg2',
-    'NAME': 'cidonkey',
-    'USER': 'postgres',
-    'PASSWORD': 'cidonkey',
-    'HOST': 'localhost',
-    'PORT': '',
-    'CONN_MAX_AGE': None
-}
-
-DATABASES = {'default': DB_POSTGRES}
+}}
 
 LANGUAGE_CODE = 'en-gb'
 
@@ -98,3 +87,8 @@ MESSAGE_TAGS = {
 PERSISTENCE_DIR = '/tmp/ci-persistence'
 # whether or not to update commits' on github
 SET_STATUS = True
+
+try:
+    from localsettings import *
+except ImportError:
+    pass
