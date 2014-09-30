@@ -1,8 +1,7 @@
 import os
 BASE_DIR = os.path.dirname(__file__)
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'ck@y+(qt4(6a+ev(5%ytz_yd96(#rql79!$2=7j6=#i7viu#=&'
+SECRET_KEY = '!!! change me in localsettings.py !!!'
 
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
