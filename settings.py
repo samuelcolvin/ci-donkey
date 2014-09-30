@@ -3,7 +3,7 @@ BASE_DIR = os.path.dirname(__file__)
 
 SECRET_KEY = '!!! change me in localsettings.py !!!'
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 # you should set this in localsettings.py
@@ -83,13 +83,15 @@ MESSAGE_TAGS = {
 }
 
 # docker settings:
-
+# how often the CI thread should check docker
+THREAD_CHECK_RATE = 10
+# delete containers after x minutes, if -1 containers will not be deleted
+CONTAINER_DELETE_MINUTES = 60
 PERSISTENCE_DIR = '/tmp/ci-persistence'
 # whether or not to update commits' on github
 SET_STATUS = True
 
-import sys
-sys.path.append(BASE_DIR)
+# override settings locally
 try:
     from localsettings import *
 except ImportError:

@@ -1,11 +1,14 @@
 import subprocess
 import shlex
+from time import sleep
+import datetime
 from django.conf import settings
 from django.core.files import File
 from django.utils import timezone
 import thread
 import traceback
 import tempfile
+import pytz
 import requests
 import os
 import zipfile
@@ -41,8 +44,9 @@ class BuildProcess(object):
         run the build script.
         """
         try:
-            self.build_info.temp_dir = tempfile.mkdtemp()
             self.build_info.process_log = ''
+            self._delete_old_containers()
+            self.build_info.temp_dir = tempfile.mkdtemp()
             self._set_url()
             self._log('doing badge updates: %r' % self.badge_updates)
             self.build_info.save()
@@ -52,7 +56,13 @@ class BuildProcess(object):
             self._zip_repo()
             self._log('STARTING DOCKER:')
             self.build_info.container = cidocker.start_ci(self.project.docker_image, self.build_info.temp_dir)
-            self.build_info.docker_started = True
+            self.build_info.container_exists = True
+            self.build_info.save()
+            while True:
+                sleep(settings.THREAD_CHECK_RATE)
+                bi = self.check_docker()
+                if bi.complete:
+                    break
         except (common.KnownError, common.CommandError), e:
             self._log('%s: %s' % (e.__class__.__name__, str(e)), '')
             self._process_error()
@@ -67,18 +77,19 @@ class BuildProcess(object):
         if self.build_info.complete:
             return self.build_info
         try:
-            if not self.build_info.docker_started:
+            if not self.build_info.container_exists:
                 return self.build_info
             status = cidocker.check_progress(self.build_info.container)
             if not status:
                 return self.build_info
-            exit_code, finished, logs = status
+            exit_code, finished, logs, con_inspection = status
             self.build_info.test_success = self.build_info.project.script_split in logs
             if self.build_info.test_success:
                 self.build_info.test_passed = exit_code == 0
                 process_log, ci_log = logs.split(self.build_info.project.script_split, 1)
                 self.build_info.process_log += '\n' + process_log
                 self.build_info.ci_log = ci_log
+                self.build_info.container_inspection = con_inspection
             else:
                 self.build_info.process_log += '\n' + logs
             self._log('DOCKER FINISHED:')
@@ -98,6 +109,17 @@ class BuildProcess(object):
         finally:
             self.build_info.save()
         return self.build_info
+
+    def _delete_old_containers(self):
+        delay = settings.CONTAINER_DELETE_MINUTES
+        if delay < 0:
+            self._log('Not deleting old containers.')
+            return
+        n = datetime.datetime.now().replace(tzinfo=pytz.UTC) - datetime.timedelta(minutes=delay)
+        del_con_ids = BuildInfo.objects.filter(finished__lt=n).values_list('container', flat=True)
+        deleted_cons = cidocker.delete_old_containers(del_con_ids)
+        BuildInfo.objects.filter(container__in=deleted_cons).update(container_exists=False)
+        self._log('%d old containers deleted.' % len(deleted_cons))
 
     def _process_error(self):
         self._update_status('error', 'Error running tests')

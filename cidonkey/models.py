@@ -79,11 +79,12 @@ class BuildInfo(models.Model):
     modified = models.DateTimeField('last modified', auto_now=True)
 
     container = models.CharField('container ID', max_length=100, null=True, blank=True)
+    container_exists = models.BooleanField('container exists', default=False)
+    container_inspection = models.TextField('container inspection', null=True, blank=True)
     temp_dir = models.CharField('temporary directory', max_length=100, null=True, blank=True)
 
     process_log = models.TextField('process log', null=True, blank=True)
     ci_log = models.TextField('ci log', null=True, blank=True)
-    docker_started = models.BooleanField('docker started', default=False)
     complete = models.BooleanField('complete', default=False)
     test_success = models.BooleanField('test succeeded', default=True)
     test_passed = models.BooleanField('test passed', default=False)

@@ -41,5 +41,15 @@ def check_progress(con_id):
     finish_str = state['FinishedAt']
     finished = dateutil.parser.parse(finish_str)
     logs = c.logs(con_id)
-    c.remove_container(con_id)
-    return exit_code, finished, logs
+    return exit_code, finished, logs, con
+
+
+def delete_old_containers(del_con_ids):
+    c = _get_con()
+    all_con_ids = [con['Id'] for con in c.containers(all=True)]
+    deleted_cons = []
+    for del_con_id in del_con_ids:
+        if del_con_id in all_con_ids:
+            c.remove_container(del_con_id)
+            deleted_cons.append(del_con_id)
+    return deleted_cons
