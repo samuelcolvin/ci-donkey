@@ -87,6 +87,8 @@ PERSISTENCE_DIR = '/tmp/ci-persistence'
 # whether or not to update commits' on github
 SET_STATUS = True
 
+import sys
+sys.path.append(BASE_DIR)
 try:
     from localsettings import *
 except ImportError:
