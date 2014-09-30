@@ -6,7 +6,8 @@ SECRET_KEY = '!!! change me in localsettings.py !!!'
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
-ALLOWED_HOSTS = []
+# you should set this in localsettings.py
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = (
     'django.contrib.admin',
