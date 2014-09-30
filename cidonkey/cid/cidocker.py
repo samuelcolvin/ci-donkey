@@ -41,4 +41,5 @@ def check_progress(con_id):
     finish_str = state['FinishedAt']
     finished = dateutil.parser.parse(finish_str)
     logs = c.logs(con_id)
+    c.remove_container(con_id)
     return exit_code, finished, logs
