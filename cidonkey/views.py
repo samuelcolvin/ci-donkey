@@ -33,7 +33,10 @@ def cid_context(request):
         else:
             main_menu = []
         # TODO: add github url here
-    return {'main_menu': main_menu, 'admin_access': request.user.is_staff, 'messages': []}
+    return {'request': request,
+            'main_menu': main_menu,
+            'admin_access': request.user.is_staff,
+            'messages': []}
 
 
 class PageWithAjax(TemplateView):
@@ -105,7 +108,7 @@ class BuildList(BuildMixin, ListView):
     model = BuildInfo
     template_name = 'build_list.jinja'
     link_column = 'start'
-    columns = ('start', 'time_taken', 'trigger', 'label', 'author', 'successful')
+    columns = ('start', 'time_taken', 'trigger', 'label', 'author', 'show_coverage', 'successful')
 
     def dispatch(self, request, *args, **kwargs):
         if not any_active_builds(self.request):

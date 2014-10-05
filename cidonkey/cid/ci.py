@@ -2,6 +2,7 @@ import subprocess
 import shlex
 from time import sleep
 import datetime
+import re
 from django.conf import settings
 from django.core.files import File
 from django.utils import timezone
@@ -90,6 +91,13 @@ class BuildProcess(object):
                 self.build_info.process_log += '\n' + process_log
                 self.build_info.ci_log = ci_log
                 self.build_info.container_inspection = con_inspection
+                if self.project.coverage_regex:
+                    m = re.search(self.project.coverage_regex, self.build_info.ci_log)
+                    if m:
+                        try:
+                            self.build_info.coverage = float(m.groups()[0])
+                        except (ValueError, IndexError):
+                            pass
             else:
                 self.build_info.process_log += '\n' + logs
             self._log('DOCKER FINISHED:')

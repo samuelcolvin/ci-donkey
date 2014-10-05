@@ -28,24 +28,26 @@
             <a class="navbar-brand" href="{{ url('build-list') }}">{{ self.title() }}</a>
           </div>
           <div class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-              <li>
-                <a href="#" id="build-master">Build Master</a>
-              </li>
-              {% block main_menu %}
-                {% for url, name in main_menu %}
-                <li class="{#{% if item.active %}active{% endif %}#}"><a href="{{ url }}">{{ name }}</a></li>
-                {% endfor %}
-              {% endblock %}
-            </ul>
-            <ul class="nav navbar-nav navbar-right">
-              {% block menu_right %}
-              {% endblock %}
-              {% if admin_access %}
-                <li><a href="{{ url('admin:index') }}">Admin</a></li>
-              {% endif %}
-              <li><a href="{{ url('logout') }}">Logout</a></li>
-            </ul>
+            {% if request.user.is_authenticated() %}
+              <ul class="nav navbar-nav">
+                <li>
+                  <a href="#" id="build-master">Build Master</a>
+                </li>
+                {% block main_menu %}
+                  {% for url, name in main_menu %}
+                  <li class="{#{% if item.active %}active{% endif %}#}"><a href="{{ url }}">{{ name }}</a></li>
+                  {% endfor %}
+                {% endblock %}
+              </ul>
+              <ul class="nav navbar-nav navbar-right">
+                {% block menu_right %}
+                {% endblock %}
+                {% if admin_access %}
+                  <li><a href="{{ url('admin:index') }}">Admin</a></li>
+                {% endif %}
+                <li><a href="{{ url('logout') }}">Logout</a></li>
+              </ul>
+            {% endif %}
           </div>
         </div>
       </div>

@@ -28,6 +28,10 @@ class Project(models.Model):
     script_split = models.CharField('script splitter', max_length=100, default='**MAIN SCRIPT**',
                                     help_text='tag splitting the pre script and main script, this should '
                                               'be written to stdout to start the main script.')
+    coverage_regex = models.CharField('coverage regex', max_length=500, null=True, blank=True,
+                                      default='\nOVERALL COVERAGE = ([\d\.]+)%\n',
+                                      help_text='regular expression to use to search for overage value, should have '
+                                                'one group with can be parsed as a float.')
     docker_image = models.CharField('docker image', max_length=100, default='cidonkey',
                                     help_text='Name of the docker image to use for CI.')
     default_branch = models.CharField('default branch', default='master', max_length=50)
@@ -121,6 +125,12 @@ class BuildInfo(models.Model):
 
         return float2time(total_seconds)
     time_taken.short_description = 'time taken'
+
+    def show_coverage(self):
+        if self.coverage is None:
+            return ''
+        return ('%0.2f' % self.coverage).rstrip('.0') + '%'
+    show_coverage.short_description = 'coverage'
 
     def commit_url(self):
         if not self.commit_message:
