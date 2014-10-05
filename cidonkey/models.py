@@ -58,8 +58,10 @@ class Project(models.Model):
 
 def archive_dir(instance, filename):
     name = instance.sha if instance.sha else str(uuid.uuid4())
-    stamp = datetime.datetime.now().strftime('%a_%d-%b-%Y_%H-%M-%S')
-    return '%s_%s.zip' % (stamp, name)
+    n = datetime.datetime.now()
+    stamp = n.strftime('%a_%d-%b-%Y_%H-%M-%S')
+    folder = n.strftime('%Y_%m')
+    return '%s/%s_%s.zip' % (folder, stamp, name)
 
 
 class BuildInfo(models.Model):

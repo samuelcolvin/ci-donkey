@@ -4,8 +4,10 @@ Jinja2==2.7.3
 MarkupSafe==0.23
 argparse==1.2.1
 backports.ssl-match-hostname==3.4.0.2
+boto==2.31.1
 dateutils==0.6.6
 django-jinja==1.0.4
+django-storages==1.1.8
 docker-py==0.5.0
 ipython==2.2.0
 ply==3.4

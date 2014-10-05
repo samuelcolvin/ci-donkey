@@ -1,9 +1,8 @@
-var start_delay = 2000;
 var fast_update = 10000;
 var slow_update = 30000;
 var live_time_clear = null;
 $(document).ready(function(){
-  delay_update(start_delay);
+  delay_update(fast_update);
   live_time_clear = setInterval(live_times, 250);
   live_times()
 });

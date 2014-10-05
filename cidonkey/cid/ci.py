@@ -54,7 +54,7 @@ class BuildProcess(object):
             self._update_status('pending', 'CI build underway')
             self._set_svg('in_progress')
             self._download()
-            self._zip_repo()
+            self._zip_save_repo()
             self._log('STARTING DOCKER:')
             self.build_info.container = cidocker.start_ci(self.project.docker_image, self.build_info.temp_dir)
             self.build_info.container_exists = True
@@ -185,7 +185,7 @@ class BuildProcess(object):
             self._log('checkout out ' + self.build_info.sha)
             self._execute('git checkout ' + self.build_info.sha)
 
-    def _zip_repo(self):
+    def _zip_save_repo(self):
         self._log('zipping repo...')
         count = 0
         with tempfile.TemporaryFile(suffix='.zip') as temp_file:
@@ -196,8 +196,8 @@ class BuildProcess(object):
                         local_path = full_path.replace(self.build_info.temp_dir, '').lstrip('/')
                         ztemp_file.write(full_path, local_path)
                         count += 1
+            self._log('zipped %d files to archive, saving zip file...' % count)
             self.build_info.archive.save(temp_file.name, File(temp_file))
-        self._log('zipped %d files to archive' % count)
 
     def _execute(self, commands):
         if isinstance(commands, basestring):
