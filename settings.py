@@ -3,7 +3,7 @@ BASE_DIR = os.path.dirname(__file__)
 
 SECRET_KEY = '!!! change me in localsettings.py !!!'
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 # you should set this in localsettings.py
@@ -95,4 +95,6 @@ SET_STATUS = True
 try:
     from localsettings import *
 except ImportError:
-    pass
+    print 'no localsettings.py'
+else:
+    print 'localsettings.py imported successfully'

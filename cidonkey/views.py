@@ -64,6 +64,7 @@ class BuildMixin(object):
     model = None
     link_column = None
     columns = []
+    live_times = []
 
     def render_to_response(self, context, **response_kwargs):
         return super(BuildMixin, self).render_to_response(context, status=self.status, **response_kwargs)
@@ -75,6 +76,7 @@ class BuildMixin(object):
         context['headings'] = self._headings()
         context['get_value'] = self._get_value
         context['get_verbose_name'] = self._get_verbose_name
+        context['live_times'] = self.live_times
         return context
 
     def _headings(self):
@@ -96,9 +98,13 @@ class BuildMixin(object):
         value = getattr(obj, attr_name)
         if hasattr(value, '__call__'):
             value = value()
+
+        if attr_name in self.live_times and isinstance(value, datetime.datetime):
+            return '<span class="live-time" data-start="%s"></span>' % value.isoformat(), True
+
         if isinstance(value, datetime.datetime):
             value = naturaltime(value)
-        return value
+        return value, False
 
 
 class BuildList(BuildMixin, ListView):
@@ -109,6 +115,8 @@ class BuildList(BuildMixin, ListView):
     template_name = 'build_list.jinja'
     link_column = 'start'
     columns = ('start', 'time_taken', 'trigger', 'label', 'author', 'show_coverage', 'successful')
+    paginate_by = 50
+    live_times = ['time_taken']
 
     def dispatch(self, request, *args, **kwargs):
         if not any_active_builds(self.request):

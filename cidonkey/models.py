@@ -103,10 +103,11 @@ class BuildInfo(models.Model):
     successful.short_description = 'successful'
 
     def time_taken(self):
-        fin = self.finished if self.complete else timezone.now()
-        if not fin:
+        if not self.complete:
+            return self.start
+        if not self.finished:
             return ''
-        diff = fin - self.start
+        diff = self.finished - self.start
         total_seconds = diff.total_seconds()
 
         def float2time(f):

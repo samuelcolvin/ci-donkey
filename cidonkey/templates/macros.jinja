@@ -1,6 +1,8 @@
 {% macro display(obj, attr_name) %}
-  {% set v = get_value(obj, attr_name) %}
-  {% if v|string == 'None' %}
+  {% set v, pre_rendered = get_value(obj, attr_name) %}
+  {% if pre_rendered %}
+    {{ v|safe }}
+  {% elif v|string == 'None' %}
     <span class="none"></span>
   {% elif v|string in ['True', 'False'] %}
     <span class="glyphicon glyphicon-{{ 'ok' if v else 'remove' }}"></span>
