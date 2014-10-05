@@ -3,8 +3,7 @@ var slow_update = 30000;
 var live_time_clear = null;
 $(document).ready(function(){
   delay_update(fast_update);
-  live_time_clear = setInterval(live_times, 250);
-  live_times()
+  start_live_times();
 });
 
 function delay_update(timeout){
@@ -20,11 +19,18 @@ function update(){
     var code = xhr.status;
     if (code == 200) {
       delay_update(fast_update);
+      start_live_times();
     }
     else if (code == 201){
       delay_update(slow_update);
     }
   });
+}
+
+function start_live_times(){
+  clearInterval(live_time_clear);
+  live_time_clear = setInterval(live_times, 250);
+  live_times()
 }
 
 function live_times(){
