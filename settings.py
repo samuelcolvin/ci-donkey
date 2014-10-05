@@ -61,24 +61,20 @@ USE_TZ = True
 STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
 
-# whether or not to use amazon s3 for storing zipped backups (media files)
-USE_S3 = False
+# # To enable S3 put the following code in localsettings.py:
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+# AWS_QUERYSTRING_AUTH = True
+# AWS_S3_SECURE_URLS = True
+# AWS_DEFAULT_ACL = 'private'
+# AWS_QUERYSTRING_EXPIRE = 600
+# # The following is sensitive, make sure you don't inadvertently commit it to public VC!
+# AWS_ACCESS_KEY_ID = 'aws s3 key id'
+# AWS_SECRET_ACCESS_KEY = 'aws s3 access key'
+# AWS_STORAGE_BUCKET_NAME = 'bucket name'
+# MEDIA_URL = 'https://... s3 url'
 
-if USE_S3:
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
-    AWS_QUERYSTRING_AUTH = True
-    AWS_S3_SECURE_URLS = True
-    AWS_DEFAULT_ACL = 'private'
-    AWS_QUERYSTRING_EXPIRE = 600
-    # You need to enter the following in localsettings.py or via enviroment variables
-    # (or here, but make sure not to commit them to any public vc server!)
-    #     AWS_ACCESS_KEY_ID = 'aws s3 key id'
-    #     AWS_SECRET_ACCESS_KEY = 'aws s3 access key'
-    #     AWS_STORAGE_BUCKET_NAME = 'bucket name'
-    #     MEDIA_URL = 'https://... s3 url'
-else:
-    MEDIA_ROOT = 'mediafiles'
-    MEDIA_URL = '/media/'
+MEDIA_ROOT = 'mediafiles'
+MEDIA_URL = '/media/'
 
 TEMPLATE_LOADERS = (
     'django_jinja.loaders.FileSystemLoader',
