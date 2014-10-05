@@ -53,8 +53,11 @@ class BuildProcess(object):
             self.build_info.save()
             self._update_status('pending', 'CI build underway')
             self._set_svg('in_progress')
+            self.build_info.save()
             self._download()
+            self.build_info.save()
             self._zip_save_repo()
+            self.build_info.save()
             self._log('STARTING DOCKER:')
             self.build_info.container = cidocker.start_ci(self.project.docker_image, self.build_info.temp_dir)
             self.build_info.container_exists = True

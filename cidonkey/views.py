@@ -65,6 +65,7 @@ class BuildMixin(object):
     link_column = None
     columns = []
     live_times = []
+    live_times = ['time_taken']
 
     def render_to_response(self, context, **response_kwargs):
         return super(BuildMixin, self).render_to_response(context, status=self.status, **response_kwargs)
@@ -116,7 +117,6 @@ class BuildList(BuildMixin, ListView):
     link_column = 'start'
     columns = ('start', 'time_taken', 'trigger', 'label', 'author', 'show_coverage', 'successful')
     paginate_by = 50
-    live_times = ['time_taken']
 
     def dispatch(self, request, *args, **kwargs):
         if not any_active_builds(self.request):
