@@ -2,6 +2,7 @@ import subprocess
 import shlex
 from time import sleep
 import datetime
+import shutil
 import re
 from django.conf import settings
 from django.core.files import File
@@ -47,7 +48,7 @@ class BuildProcess(object):
         try:
             self.build_info.process_log = ''
             self._delete_old_containers()
-            self.build_info.temp_dir = tempfile.mkdtemp()
+            self.build_info.temp_dir = tempfile.mkdtemp(prefix='cid_src_tmp')
             self._set_url()
             self._log('doing badge updates: %r' % self.badge_updates)
             self.build_info.save()
@@ -104,6 +105,7 @@ class BuildProcess(object):
             else:
                 self.build_info.process_log += '\n' + logs
             self._log('DOCKER FINISHED:')
+            shutil.rmtree(self.build_info.temp_dir, ignore_errors=True)
             self.build_info.complete = True
             self.build_info.finished = finished
 
@@ -135,6 +137,7 @@ class BuildProcess(object):
     def _process_error(self):
         self._update_status('error', 'Error running tests')
         self._set_svg(False)
+        shutil.rmtree(self.build_info.temp_dir, ignore_errors=True)
         self.build_info.test_success = False
         self.build_info.complete = True
         self.build_info.finished = timezone.now()
