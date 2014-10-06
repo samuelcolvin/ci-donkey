@@ -1,7 +1,15 @@
 ci-donkey
 =======
 
-Simple Continuous Integration based on django and docker.
+Simple Continuous Integration based on django and docker with excellent github integration.
+
+Supports:
+* **Build Badge** showing status (building, passing, failing) for use in readme files.
+* **Github webhooks** to kick off builds
+* **Github status updates** to mark commits and pull requests as passing/failing.
+* **intelligent setup caching** for faster build. A persistent attached volume on the docker image allows you to check the hash of your pre test setup (eg. python's `requirements.txt` file) and copy it into place if it exists instead of rebuilding it.
+* **prebuild/build** split, so you can visually and logically split CI setup and actual setup.
+* **Coverage** the output can be parsed for the coverage value which which is then listed next to builds.
 
 ## Basic Setup
 
