@@ -66,6 +66,10 @@ You can check the log to see if it's started ok:
 If everything has gone ok you can restart nginx:
 
     sudo service nginx restart
+
+You can make sure the system start after reboot by adding the following to `/etc/rc.local`:
+
+    /var/www/ci-donkey/setup/start_uwsgi.sh
     
 ## Docker Setup
 
@@ -79,6 +83,11 @@ To enable www-data to use docker:
     sudo service docker.io restart
 
 Then "log in" www-data again, the easiest way is `sudo reboot`.
+
+ci-donkey needs a docker image to use for builds, by default this is called `cidonkey` (can be changed on project setup) 
+to create such an image from the example docker file `docker/Dockerfile` run
+
+    docker build -t cidonkey docker/Dockerfile
 
 ## localsettings.py and S3
 
