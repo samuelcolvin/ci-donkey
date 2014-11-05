@@ -84,7 +84,7 @@ class BuildProcess(object):
         check status of a build to see if it's finished.
         """
         self = BuildProcess(build_info)
-        self._check_docker()
+        return self._check_docker()
 
     def _check_docker(self):
         if self.build_info.complete:
