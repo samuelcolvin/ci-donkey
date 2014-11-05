@@ -137,7 +137,8 @@ class BuildProcess(object):
     def _process_error(self):
         self._update_status('error', 'Error running tests')
         self._set_svg(False)
-        shutil.rmtree(self.build_info.temp_dir, ignore_errors=True)
+        if self.build_info.temp_dir:
+            shutil.rmtree(self.build_info.temp_dir, ignore_errors=True)
         self.build_info.test_success = False
         self.build_info.complete = True
         self.build_info.finished = timezone.now()
