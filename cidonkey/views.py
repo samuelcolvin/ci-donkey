@@ -115,8 +115,8 @@ class BuildList(BuildMixin, ListView):
     """
     model = BuildInfo
     template_name = 'build_list.jinja'
-    link_column = 'start'
-    columns = ('start', 'time_taken', 'trigger', 'label', 'author', 'show_coverage', 'successful')
+    link_column = 'created'
+    columns = ('created', 'time_taken', 'trigger', 'label', 'author', 'show_coverage', 'successful')
     paginate_by = 50
 
     def dispatch(self, request, *args, **kwargs):
