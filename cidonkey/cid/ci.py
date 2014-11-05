@@ -159,7 +159,7 @@ class BuildProcess(object):
         """
         Check if a new build can begin, if so start them
         """
-        if BuildInfo.objects.filter(complete=False).count() < MAX_CONCURRENT_BUILDS:
+        if BuildInfo.objects.filter(complete=False, queued=False).count() < MAX_CONCURRENT_BUILDS:
             queue_first = BuildInfo.objects.filter(queued=True).order_by('id').first()
             if queue_first:
                 queue_first.queued = False

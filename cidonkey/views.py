@@ -222,7 +222,7 @@ def _start_queue_build(build_info):
     :param build_info: BuildInfo instance to queue or start
     :returns: True if build started, else False
     """
-    if BuildInfo.objects.filter(complete=False).count() >= MAX_CONCURRENT_BUILDS:
+    if BuildInfo.objects.filter(complete=False, queued=False).count() >= MAX_CONCURRENT_BUILDS:
         build_info.queued = True
         build_info.save()
     else:
