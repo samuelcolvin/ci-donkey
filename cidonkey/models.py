@@ -81,9 +81,10 @@ class BuildInfo(models.Model):
     fetch_cmd = models.CharField('fetch command', max_length=200, null=True, blank=True)
     fetch_branch = models.CharField('fetch branch name', max_length=200, null=True, blank=True)
 
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField('last modified', auto_now=True)
     start = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
-    modified = models.DateTimeField('last modified', auto_now=True)
 
     container = models.CharField('container ID', max_length=100, null=True, blank=True)
     container_exists = models.BooleanField('container exists', default=False)

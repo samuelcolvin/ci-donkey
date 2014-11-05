@@ -134,7 +134,7 @@ class BuildDetails(BuildMixin, DetailView):
     """
     model = BuildInfo
     template_name = 'build.jinja'
-    columns = ('start',
+    columns = ('created',
                'modified',
                'time_taken',
                'trigger',
