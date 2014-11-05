@@ -4,6 +4,8 @@
     {{ v|safe }}
   {% elif v|string == 'None' %}
     <span class="none"></span>
+  {% elif v|string == 'FAIL' %}
+    <span class="glyphicon glyphicon-remove" style="color: #666"></span>
   {% elif v|string in ['True', 'False'] %}
     <span class="glyphicon glyphicon-{{ 'ok' if v else 'remove' }}"></span>
   {% elif 'glyphicon-' in v|string %}

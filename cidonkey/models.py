@@ -106,7 +106,9 @@ class BuildInfo(models.Model):
             return 'glyphicon-pause'
         if not self.complete:
             return 'glyphicon-play'
-        return self.test_success and self.test_passed
+        if not self.test_success:
+            return 'FAIL'
+        return self.test_passed
     successful.short_description = 'successful'
 
     def time_taken(self):
