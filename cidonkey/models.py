@@ -81,7 +81,7 @@ class BuildInfo(models.Model):
     fetch_cmd = models.CharField('fetch command', max_length=200, null=True, blank=True)
     fetch_branch = models.CharField('fetch branch name', max_length=200, null=True, blank=True)
 
-    start = models.DateTimeField(auto_now_add=True)
+    start = models.DateTimeField(null=True, blank=True)
     finished = models.DateTimeField(null=True, blank=True)
     modified = models.DateTimeField('last modified', auto_now=True)
 
@@ -112,6 +112,8 @@ class BuildInfo(models.Model):
     successful.short_description = 'successful'
 
     def time_taken(self):
+        if self.queued:
+            return '-'
         if not self.complete:
             return self.start
         if not self.finished:

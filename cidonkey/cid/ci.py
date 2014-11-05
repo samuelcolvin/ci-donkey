@@ -46,6 +46,7 @@ class BuildProcess(object):
         """
         self = BuildProcess(build_info)
         try:
+            self.build_info.start = datetime.datetime.now().replace(tzinfo=pytz.UTC)
             self.build_info.process_log = ''
             self._delete_old_containers()
             self.build_info.temp_dir = tempfile.mkdtemp(prefix='cid_src_tmp')
@@ -84,7 +85,9 @@ class BuildProcess(object):
         check status of a build to see if it's finished.
         """
         self = BuildProcess(build_info)
-        return self._check_docker()
+        bi = self._check_docker()
+        self._check_queue()
+        return bi
 
     def _check_docker(self):
         if self.build_info.complete:
@@ -129,7 +132,6 @@ class BuildProcess(object):
             self._process_error()
         finally:
             self.build_info.save()
-            self._check_queue()
         return self.build_info
 
     def _delete_old_containers(self):

@@ -145,6 +145,7 @@ class BuildDetails(BuildMixin, DetailView):
                'commit_url',
                'author',
                'complete',
+               'queued',
                'test_success',
                'test_passed',
                'container',)
