@@ -38,7 +38,8 @@ class Project(models.Model):
     allow_repeat = models.BooleanField('allow_repeats', default=False,
                                        help_text='Allow repeat builds for the same sha.')
     # TODO: this should be set to editable=False
-    webhook_secret = models.CharField('webhook secret', max_length=100, blank=True)
+    webhook_secret = models.CharField(max_length=100, editable=False)
+    update_url = models.CharField(max_length=200, default='unknown', editable=False)
 
     SVG_NULL = 'null.svg'
     SVG_IN_PROGRESS = 'in_progress.svg'
@@ -94,11 +95,15 @@ class BuildInfo(models.Model):
     complete = models.BooleanField('complete', default=False)
     test_success = models.BooleanField('test succeeded', default=True)
     test_passed = models.BooleanField('test passed', default=False)
+    queued = models.BooleanField('queued', default=False)
+
     coverage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     archive = models.FileField(upload_to=archive_dir, null=True, blank=True)
 
     def successful(self):
+        if self.queued:
+            return 'glyphicon-pause'
         if not self.complete:
             return 'glyphicon-play'
         return self.test_success and self.test_passed

@@ -20,6 +20,7 @@ from django.contrib.humanize.templatetags.humanize import naturaltime
 
 from . import cid
 from .models import BuildInfo, Project
+from settings import MAX_CONCURRENT_BUILDS
 
 
 def cid_context(request):
@@ -166,15 +167,20 @@ def webhook(request, pk):
     project = get_project(pk)
     if not project:
         return HttpResponse('no project created', status=403)
-    time.sleep(0.5)
+    # this makes it even more impossible to guess key via brute force
+    time.sleep(0.2)
     build_info = BuildInfo.objects.create(project=project)
-    response_code, info = cid.process_github_webhook(request, build_info)
+    response_code, build_info2 = cid.process_github_webhook(request, build_info)
     if response_code == 202:
-        cid.build(info, get_site(request))
-        msg = 'building started, id = %d' % info.id
+        set_site(build_info.project, request)
+        if _start_queue_build(build_info2):
+            msg = 'build started, id = %d' % build_info2.id
+        else:
+            msg = 'build queued, id = %d' % build_info2.id
+            response_code = 201
     else:
         build_info.delete()
-        msg = str(info)
+        msg = str(build_info2)
     return HttpResponse(msg, status=response_code)
 
 
@@ -194,20 +200,40 @@ def status_svg(request, pk):
 def go_build(request):
     project = get_project()
     if project:
+        set_site(project, request)
         build_info = BuildInfo.objects.create(trigger='manual',
                                               author=request.user.username,
                                               project=project,
                                               on_master=True)
-        cid.build(build_info, get_site(request))
+        if not _start_queue_build(build_info):
+            messages.info(request, 'build queued')
     else:
         messages.warning(request, 'No project created')
     return redirect(reverse('build-list'))
 
 
+def _start_queue_build(build_info):
+    """
+    Check whether the build can begin immediately or needs to be queued.
+
+    If it can start; start it, else set queued to True and save build_info.
+
+    :param build_info: BuildInfo instance to queue or start
+    :returns: True if build started, else False
+    """
+    if BuildInfo.objects.filter(complete=False).count() >= MAX_CONCURRENT_BUILDS:
+        build_info.queued = True
+        build_info.save()
+    else:
+        cid.build(build_info)
+    return not build_info.queued
+
+
 def check(request, build_info):
     bi = build_info
     try:
-        bi = cid.check(build_info, get_site(request))
+        set_site(bi.project, request)
+        bi = cid.check(build_info)
     except cid.KnownError, e:
         messages.error(request, str(e))
         bi = build_info
@@ -225,9 +251,10 @@ def any_active_builds(r):
     return any([not check_build(r, bi)['complete'] for bi in BuildInfo.objects.filter(complete=False)])
 
 
-def get_site(request):
+def set_site(project, request):
     current_site = get_current_site(request)
-    return 'http://' + current_site.domain + '/'
+    project.update_url = 'http://' + current_site.domain + '/'
+    project.save()
 
 
 def get_project(pk=None):

@@ -18,33 +18,33 @@ import zipfile
 from cidonkey.models import BuildInfo
 
 from . import cidocker, github, common
+from settings import MAX_CONCURRENT_BUILDS
 
 
-def build(bi, update_url):
-    b = BuildProcess(bi, update_url)
-    thread.start_new_thread(b.start_build, ())
+def build(bi):
+    thread.start_new_thread(BuildProcess.start_build, (bi,))
 
 
-def check(bi, update_url):
-    b = BuildProcess(bi, update_url)
-    return b.check_docker()
+def check(bi):
+    return BuildProcess.check_docker(bi)
 
 
 class BuildProcess(object):
-    def __init__(self, build_info, update_url='unknown'):
+    def __init__(self, build_info):
         assert isinstance(build_info, BuildInfo), 'build_info must be an instance of BuildInfo, not %s' % \
                                                   build_info.__class__.__name__
-        self.update_url = update_url
         self.build_info = build_info
         self.project = build_info.project
         self.token = self.project.github_token
         self.valid_token = isinstance(self.token, basestring) and len(self.token) > 0
         self.badge_updates = self.build_info.on_master
 
-    def start_build(self):
+    @classmethod
+    def start_build(cls, build_info):
         """
         run the build script.
         """
+        self = BuildProcess(build_info)
         try:
             self.build_info.process_log = ''
             self._delete_old_containers()
@@ -65,7 +65,7 @@ class BuildProcess(object):
             self.build_info.save()
             while True:
                 sleep(settings.THREAD_CHECK_RATE)
-                bi = self.check_docker()
+                bi = self._check_docker()
                 if bi.complete:
                     break
         except (common.KnownError, common.CommandError), e:
@@ -78,7 +78,15 @@ class BuildProcess(object):
             self.build_info.save()
         return self.build_info
 
-    def check_docker(self):
+    @classmethod
+    def check_docker(cls, build_info):
+        """
+        check status of a build to see if it's finished.
+        """
+        self = BuildProcess(build_info)
+        self._check_docker()
+
+    def _check_docker(self):
         if self.build_info.complete:
             return self.build_info
         try:
@@ -116,11 +124,12 @@ class BuildProcess(object):
             self._set_svg(self.build_info.test_passed)
         except common.KnownError, e:
             raise e
-        except Exception, e:
+        except Exception:
             self._log(traceback.format_exc())
             self._process_error()
         finally:
             self.build_info.save()
+            self._check_queue()
         return self.build_info
 
     def _delete_old_containers(self):
@@ -143,6 +152,18 @@ class BuildProcess(object):
         self.build_info.complete = True
         self.build_info.finished = timezone.now()
 
+    @staticmethod
+    def _check_queue():
+        """
+        Check if a new build can begin, if so start them
+        """
+        if BuildInfo.objects.filter(complete=False).count() < MAX_CONCURRENT_BUILDS:
+            queue_first = BuildInfo.objects.filter(queued=True).order_by('id').first()
+            if queue_first:
+                queue_first.queued = False
+                queue_first.save()
+                build(queue_first)
+
     def _set_url(self):
         """
         generate the url which will be used to clone the repo.
@@ -164,7 +185,7 @@ class BuildProcess(object):
             'state': status,
             'description': message,
             'context': common.UPDATE_CONTEXT,
-            'target_url': self.update_url + str(self.build_info.id)
+            'target_url': self.build_info.project.update_url + str(self.build_info.id)
         }
         _, r = github.github_api(
             url=self.build_info.status_url,

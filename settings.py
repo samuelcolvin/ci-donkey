@@ -102,6 +102,8 @@ CONTAINER_DELETE_MINUTES = 60
 PERSISTENCE_DIR = '/tmp/ci-persistence'
 # whether or not to update commits' on github
 SET_STATUS = True
+# maximum number of simultaneous builds to allow, 1 for no concurrent builds
+MAX_CONCURRENT_BUILDS = 2
 
 # override settings locally
 try:
