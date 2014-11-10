@@ -121,7 +121,10 @@ class BuildProcess(object):
             self.build_info.finished = finished
 
             if self.build_info.test_passed:
-                self._update_status('success', 'CI Success')
+                msg = 'CI Success'
+                if isinstance(self.build_info.coverage, float):
+                    msg += ', %0.2f coverage' % self.build_info.coverage
+                self._update_status('success', msg)
             else:
                 self._update_status('failure', 'Tests failed')
             self._set_svg(self.build_info.test_passed)
