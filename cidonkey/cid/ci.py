@@ -123,7 +123,7 @@ class BuildProcess(object):
             if self.build_info.test_passed:
                 msg = 'CI Success'
                 if isinstance(self.build_info.coverage, float):
-                    msg += ', %0.2f coverage' % self.build_info.coverage
+                    msg += ', %0.2f%% coverage' % self.build_info.coverage
                 self._update_status('success', msg)
             else:
                 self._update_status('failure', 'Tests failed')
