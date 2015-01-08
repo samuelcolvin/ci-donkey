@@ -98,7 +98,7 @@ MESSAGE_TAGS = {
 # how often the CI thread should check docker
 THREAD_CHECK_RATE = 10
 # delete containers after x minutes, if -1 containers will not be deleted
-CONTAINER_DELETE_MINUTES = 60
+CONTAINER_DELETE_MINUTES = 20
 PERSISTENCE_DIR = '/tmp/ci-persistence'
 # whether or not to update commits' on github
 SET_STATUS = True

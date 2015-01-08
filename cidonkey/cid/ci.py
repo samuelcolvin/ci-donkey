@@ -192,12 +192,15 @@ class BuildProcess(object):
             'context': common.UPDATE_CONTEXT,
             'target_url': self.build_info.project.update_url + str(self.build_info.id)
         }
-        _, r = github.github_api(
+        data, r = github.github_api(
             url=self.build_info.status_url,
             token=self.token,
             method=requests.post,
             data=payload)
         self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
+        if r.status_code not in (200, 201):
+            self._log('response headers: %r' % r.headers)
+            self._log('response json: %r' % data)
         if r.status_code != 201:
             self._log('received unexpected status code, response text:')
             self._log('url posted to: %s' % self.build_info.status_url)
