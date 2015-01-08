@@ -192,19 +192,19 @@ class BuildProcess(object):
             'context': common.UPDATE_CONTEXT,
             'target_url': self.build_info.project.update_url + str(self.build_info.id)
         }
-        data, r = github.github_api(
+        _, r = github.github_api(
             url=self.build_info.status_url,
             token=self.token,
             method=requests.post,
-            data=payload)
+            data=payload,
+            extra_headers={'Content-type': 'application/json'})
         self._log('updated pull request, status "%s", response: %d' % (status, r.status_code))
-        if r.status_code not in (200, 201):
-            self._log('response headers: %r' % r.headers)
-            self._log('response json: %r' % data)
         if r.status_code != 201:
-            self._log('received unexpected status code, response text:')
+            self._log('received unexpected status code, response code')
+            self._log('response headers: %r' % r.headers)
             self._log('url posted to: %s' % self.build_info.status_url)
-            self._log(r.text[:1000])
+            self._log('payload: %r' % payload)
+            self._log('text: %r' % r.text[:1000])
 
     def _download(self):
         self._log('cloning...')

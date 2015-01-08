@@ -76,8 +76,10 @@ def _validate_signature(data, headers, secret):
     return mac.hexdigest() == signature
 
 
-def github_api(url, token, method=requests.get, data=None):
+def github_api(url, token, method=requests.get, data=None, extra_headers=None):
     headers = {'Authorization': 'token %s' % token}
+    if extra_headers:
+        headers.update(extra_headers)
     payload = None
     if data:
         payload = json.dumps(data)
