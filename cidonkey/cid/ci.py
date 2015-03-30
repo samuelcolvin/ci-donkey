@@ -104,7 +104,6 @@ class BuildProcess(object):
                 self.build_info.test_passed = exit_code == 0
                 process_log, ci_log = logs.split(self.build_info.project.script_split, 1)
                 self.build_info.process_log += '\n' + process_log
-                self.build_info.process_log += '\nexit code: %r' % exit_code
                 self.build_info.ci_log = ci_log
                 self.build_info.container_inspection = con_inspection
                 if self.project.coverage_regex:
@@ -114,9 +113,10 @@ class BuildProcess(object):
                             self.build_info.coverage = float(m.groups()[0])
                         except (ValueError, IndexError):
                             pass
+                self._log('DOCKER FINISHED, EXIT CODE: %r' % exit_code)
             else:
                 self.build_info.process_log += '\n' + logs
-            self._log('DOCKER FINISHED:')
+                self._log('DOCKER FINISHED')
             shutil.rmtree(self.build_info.temp_dir, ignore_errors=True)
             self.build_info.complete = True
             self.build_info.finished = finished
