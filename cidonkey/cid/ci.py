@@ -104,6 +104,7 @@ class BuildProcess(object):
                 self.build_info.test_passed = exit_code == 0
                 process_log, ci_log = logs.split(self.build_info.project.script_split, 1)
                 self.build_info.process_log += '\n' + process_log
+                self.build_info.process_log += '\nexit code: %r' % exit_code
                 self.build_info.ci_log = ci_log
                 self.build_info.container_inspection = con_inspection
                 if self.project.coverage_regex:
