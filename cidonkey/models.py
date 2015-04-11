@@ -73,7 +73,7 @@ class BuildInfo(models.Model):
     action = models.CharField('action', max_length=20, null=True, blank=True)
     label = models.CharField('branch label', max_length=200, null=True, blank=True)
     on_master = models.BooleanField('on master', default=False)
-    commit_message = models.CharField('commit message', max_length=200, null=True, blank=True)
+    commit_message = models.CharField('commit message', max_length=1013, null=True, blank=True)
     author = models.CharField('author', max_length=100, null=True, blank=True)
     status_url = models.URLField('status URL', null=True, blank=True)
     display_url = models.URLField('display URL', null=True, blank=True)
