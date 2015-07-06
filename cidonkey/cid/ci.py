@@ -219,9 +219,11 @@ class BuildProcess(object):
                 commands.append('git checkout ' + self.build_info.fetch_branch)
             self._execute(commands)
         if self.build_info.sha:
-            self._log('checkout out ' + self.build_info.sha)
-            branch = self.build_info.label.split('/')[-1]
-            self._execute('git checkout %s -b %s' % (self.build_info.sha, branch))
+            command = 'git checkout ' + self.build_info.sha
+            branch = self.build_info.label.split('/')[-1].replace(':', '-')
+            if branch != 'master':
+                command += ' -b ' + branch
+            self._execute(command)
 
     def _zip_save_repo(self):
         self._log('zipping repo...')

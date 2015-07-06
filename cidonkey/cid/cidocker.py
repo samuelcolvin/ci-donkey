@@ -22,7 +22,7 @@ def start_ci(image_name, src_dir):
     binds = {
         settings.PERSISTENCE_DIR: {'bind': '/persistence/', 'ro': False},
         src_dir: {'bind': '/src/', 'ro': True},
-        '/dev/urandom': {'bind': '/dev/random', 'ro': True}
+        #'/dev/urandom': {'bind': '/dev/random', 'ro': True}
     }
     volumes = [b['bind'] for b in binds.values()]
     con = c.create_container(image=image_name, volumes=volumes)

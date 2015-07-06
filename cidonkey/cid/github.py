@@ -38,7 +38,10 @@ def process_github_webhook(request, build_info):
         build_info.author = rjson['sender']['login']
         build_info.commit_message = rjson['pull_request']['title']
         build_info.display_url = rjson['pull_request']['_links']['html']['href']
-        private = rjson['pull_request']['head']['repo']['private']
+        repo = rjson['pull_request']['head']['repo']
+        if repo is None:
+            return 200, 'repo null, not building'
+        private = repo['private']
         build_info.sha = rjson['pull_request']['head']['sha']
         build_info.action = rjson['action']
         if build_info.action == 'closed':
